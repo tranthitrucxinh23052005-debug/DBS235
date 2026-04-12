@@ -300,7 +300,6 @@ export default function Tab3_AI() {
 // 🛡️ Quét dữ liệu cực an toàn
 function buildFallbackSuggestions(count: number, data: any[]): ChartSuggestion[] {
   if (!data || !Array.isArray(data) || data.length === 0) return [];
-  
   const firstRow = data.find(r => r && typeof r === 'object');
   if (!firstRow) return [];
 
@@ -310,18 +309,15 @@ function buildFallbackSuggestions(count: number, data: any[]): ChartSuggestion[]
 
   const x1 = catCols.length > 0 ? catCols[0] : cols[0];
   const y1 = numCols.length > 0 ? numCols[0] : cols[0];
-  const y2 = numCols.length > 1 ? numCols[1] : y1;
 
-  if (!x1 || !y1) return [];
-
+  // Bất chấp thiếu cột, đảo phép toán để luôn có đủ 6 biểu đồ!
   const all: ChartSuggestion[] = [
-    { title: `Điểm TB ${y1} theo ${x1}`, type: 'Bar', x: x1, y: y1, agg: 'mean' },
-    { title: `Cơ cấu sinh viên theo ${x1}`, type: 'Pie', x: x1, y: y1, agg: 'count' },
-    { title: `Tổng ${y2} phân bổ theo ${x1}`, type: 'Area', x: x1, y: y2, agg: 'sum' },
-    { title: `Dao động ${y1} giữa ${x1}`, type: 'Line', x: x1, y: y1, agg: 'mean' },
-    { title: `Số lượng phân rã ${x1}`, type: 'Bar', x: x1, y: y1, agg: 'count' }, // Đổi Pie thành Bar để an toàn
-    { title: `Tần suất khối lượng ${y1}`, type: 'Bar', x: x1, y: y1, agg: 'count' },
+    { title: `Điểm trung bình ${y1} theo ${x1}`, type: 'Bar', x: x1, y: y1, agg: 'mean' },
+    { title: `Tỷ trọng ${x1} trong dữ liệu`, type: 'Pie', x: x1, y: y1, agg: 'count' },
+    { title: `Tổng tích lũy ${y1} phân bổ theo ${x1}`, type: 'Area', x: x1, y: y1, agg: 'sum' },
+    { title: `Dao động ${y1} giữa các nhóm ${x1}`, type: 'Line', x: x1, y: y1, agg: 'mean' },
+    { title: `Phân nhóm số lượng ${x1}`, type: 'Bar', x: x1, y: y1, agg: 'count' },
+    { title: `Tần suất khối lượng ${y1}`, type: 'Pie', x: x1, y: y1, agg: 'sum' },
   ];
-  
   return all.slice(0, count);
 }

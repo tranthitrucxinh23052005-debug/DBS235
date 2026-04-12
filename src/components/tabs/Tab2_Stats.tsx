@@ -21,7 +21,7 @@ const LEVEL_COLORS: Record<string, string> = {
 };
 
 const PIE_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#6366f1', '#f43f5e', '#94a3b8'];
-
+const BOX_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#f97316'];
 export default function Tab2_Stats() {
   const { t, lang } = useLang();
   const { data } = useAppData();
@@ -113,18 +113,34 @@ export default function Tab2_Stats() {
                 {classes.slice(1).map(c => <option key={c} value={c}>{c}</option>)}
               </select>
            </div>
-           <ResponsiveContainer width="100%" height={350}>
-            <BarChart data={classData} margin={{ bottom: 40 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis dataKey="subject" tick={{ fontSize: 11, fill: '#64748b' }} angle={-25} textAnchor="end" interval={0} />
-              <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
-              <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}} />
-              <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{paddingBottom: '20px', fontSize: '12px'}} />
-              {Object.keys(LEVEL_COLORS).map(level => (
-                <Bar key={level} dataKey={level} stackId="a" fill={LEVEL_COLORS[level]} barSize={35} radius={[2, 2, 0, 0]} />
+           <ResponsiveContainer width="100%" height={380}>
+          <ComposedChart data={boxData} margin={{ bottom: 50 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+            <XAxis dataKey="subject" tick={{ fontSize: 11, fill: '#64748b', fontWeight: 600 }} angle={-25} textAnchor="end" interval={0} height={60} />
+            <YAxis domain={[0, 10]} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 600 }} />
+            <Tooltip content={<BoxTooltip />} cursor={{ fill: '#f8fafc' }} />
+            
+            {/* Lớp móng (Tàng hình) */}
+            <Bar dataKey="q1" stackId="box" fill="transparent" />
+            
+            {/* Nửa dưới của hộp (Q1 - Median) */}
+            <Bar dataKey="median" name="Q1 - Median" stackId="box">
+              {boxData?.map((entry: any, index: number) => (
+                <Cell key={`cell-bottom-${index}`} fill={BOX_COLORS[index % BOX_COLORS.length]} fillOpacity={0.5} />
               ))}
-            </BarChart>
-          </ResponsiveContainer>
+            </Bar>
+            
+            {/* Nửa trên của hộp (Median - Q3) */}
+            <Bar dataKey="q3" name="Median - Q3" stackId="box">
+              {boxData?.map((entry: any, index: number) => (
+                <Cell key={`cell-top-${index}`} fill={BOX_COLORS[index % BOX_COLORS.length]} fillOpacity={0.8} />
+              ))}
+            </Bar>
+            
+            {/* Điểm trung bình (Đường đỏ) */}
+            <Line type="monotone" dataKey="mean" stroke="#ef4444" strokeWidth={3} dot={{ r: 5, fill: '#fff', stroke: '#ef4444', strokeWidth: 2 }} activeDot={{ r: 7 }} name="Điểm trung bình" />
+          </ComposedChart>
+        </ResponsiveContainer>
         </div>
 
         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 flex flex-col">

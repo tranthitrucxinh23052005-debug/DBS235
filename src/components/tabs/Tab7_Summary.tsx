@@ -5,6 +5,7 @@ import { useLang } from '../../hooks/useLanguage';
 import { useAppData } from '../../hooks/useAppData';
 import { computeStats } from '../../lib/dataUtils';
 import { apiAiSummary, apiFinalSummary } from '../../lib/api'; // Đã thêm apiFinalSummary
+import html2canvas from "html2canvas";
 
 export default function Tab7_Summary() {
   const { t } = useLang();
@@ -83,48 +84,30 @@ export default function Tab7_Summary() {
     return lines.join('\n');
   }
 
-  const handleExportPDF = async () => {
-    if (!summaryText) return;
-    setExporting(true);
-    try {
-      const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const margin = 15;
-      const maxWidth = pageWidth - margin * 2;
+  // Nhớ cài và import cái này trên đầu file nha: 
+// import html2canvas from "html2canvas";
+// import { jsPDF } from "jspdf";
 
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(18);
-      pdf.setTextColor(30, 64, 175);
-      pdf.text('DSB FACULTY - EXAM ANALYSIS REPORT', margin, 20);
+const handleExportPDF = async () => {
+  const reportElement = document.getElementById('report-content'); // Đặt id này cho cái thẻ <div> bọc toàn bộ báo cáo của bà
+  if (!reportElement) return;
 
-      pdf.setFontSize(10);
-      pdf.setTextColor(100);
-      pdf.text(`Generated: ${new Date().toLocaleString('vi-VN')}`, margin, 28);
-      pdf.line(margin, 32, pageWidth - margin, 32);
+  try {
+    // 1. Chụp ảnh toàn bộ báo cáo với độ nét cao (scale 2)
+    const canvas = await html2canvas(reportElement, { scale: 2, useCORS: true });
+    const imgData = canvas.toDataURL('image/png');
 
-      pdf.setFontSize(10);
-      pdf.setTextColor(50);
-      const lines = summaryText.split('\n');
-      let y = 42;
+    // 2. Nhét ảnh vào PDF khổ A4
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-      for (const line of lines) {
-        if (y > 275) { pdf.addPage(); y = 20; }
-        if (line.startsWith('===') || line.startsWith('---')) {
-          pdf.setFont('helvetica', 'bold');
-          pdf.setTextColor(37, 99, 235);
-        } else {
-          pdf.setFont('helvetica', 'normal');
-          pdf.setTextColor(75, 85, 99);
-        }
-        const wrapped = pdf.splitTextToSize(line || ' ', maxWidth);
-        pdf.text(wrapped, margin, y);
-        y += wrapped.length * 6;
-      }
-      pdf.save(`Bao_cao_DSBHUB_${new Date().getTime()}.pdf`);
-    } finally {
-      setExporting(false);
-    }
-  };
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    pdf.save(`Bao_Cao_DSB_HUB_${new Date().getTime()}.pdf`);
+  } catch (error) {
+    console.error("Lỗi xuất PDF:", error);
+  }
+};
 
   if (data.length === 0) {
     return (
