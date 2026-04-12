@@ -1,5 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL ?? 'https://tieuthetunhacongdang-tx-data-analytics-api.hf.space';
-
+const API_URL = "https://tieuthetunhacongdang-tx-data-analytics-api.hf.space";
 /**
  * Hàm phụ trợ để gửi FormData bằng Fetch API
  * Tự động xử lý lỗi HTTP và trả về JSON
