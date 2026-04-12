@@ -23,12 +23,14 @@ interface ChartSuggestion {
   agg: string;
 }
 
-// 🛡️ Tối giản hóa Data: 100% trả về {name, value}, cấm tuyệt đối {x, y} để chống sập
+// 🛡️ Bọc khiên an toàn thông minh hơn (Cho phép biểu đồ Tròn không cần cột Y)
 function safeBuildChartData(rawData: any[], suggestion: ChartSuggestion) {
   if (!rawData || !Array.isArray(rawData) || rawData.length === 0) return [];
-  if (!suggestion || !suggestion.x || !suggestion.y) return [];
+  // Đã nới lỏng: Bỏ bắt buộc phải có suggestion.y
+  if (!suggestion || !suggestion.x) return []; 
 
   const { x, y, agg, type } = suggestion;
+  const safeY = y || x; // Nếu mất Y thì mượn tạm X để đếm
 
   try {
     if (type === 'Pie') {
@@ -48,7 +50,7 @@ function safeBuildChartData(rawData: any[], suggestion: ChartSuggestion) {
     for (const row of rawData) {
       if (!row) continue;
       const key = String(row[x] ?? 'N/A');
-      const val = Number(row[y]);
+      const val = Number(row[safeY]); // Dùng safeY để không bị lỗi
       if (!isNaN(val)) {
         if (!grouped[key]) grouped[key] = [];
         grouped[key].push(val);
@@ -60,6 +62,7 @@ function safeBuildChartData(rawData: any[], suggestion: ChartSuggestion) {
       if (vals.length > 0) {
         if (agg === 'sum') aggVal = vals.reduce((a, b) => a + b, 0);
         else if (agg === 'count') aggVal = vals.length;
+        else if (agg === 'max') aggVal = Math.max(...vals); // Bổ sung thuật toán Max
         else aggVal = +(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2);
       }
       return { name, value: isNaN(aggVal) ? 0 : aggVal };

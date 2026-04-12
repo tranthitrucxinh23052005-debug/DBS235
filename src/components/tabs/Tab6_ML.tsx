@@ -192,8 +192,8 @@ export default function Tab6_ML() {
                   <Scatter key={cluster} name={`Cụm ${i+1}`} data={points} fill={CLUSTER_COLORS[i % CLUSTER_COLORS.length]} fillOpacity={0.7} stroke={CLUSTER_COLORS[i % CLUSTER_COLORS.length]} strokeWidth={2} />
                 ))}
               </ScatterChart>
-              {/* BẢNG TÂM CỤM (CENTROIDS) GIAO DIỆN KÍNH */}
-        {(clusterResult as any)?.cluster_centers && (clusterResult as any)?.cluster_centers.length > 0 && (
+              {/* BẢNG TÂM CỤM (CENTROIDS) GIAO DIỆN KÍNH CHỐNG SẬP 100% */}
+        {clusterResult && (clusterResult as any).cluster_centers && Array.isArray((clusterResult as any).cluster_centers) && (clusterResult as any).cluster_centers.length > 0 && (
           <div className="mt-8 animate-in slide-in-from-bottom-4">
             <h4 className="text-center font-black text-blue-900 uppercase tracking-widest mb-4 flex items-center justify-center gap-2">
               <Sparkles className="w-5 h-5 text-blue-500" /> Đặc Trưng Nhóm (Tâm Cụm)
@@ -203,7 +203,7 @@ export default function Tab6_ML() {
                 <thead>
                   <tr className="bg-slate-100/80 border-b border-slate-200">
                     <th className="p-4 text-xs font-black text-slate-700 uppercase tracking-widest whitespace-nowrap">Phân Nhóm</th>
-                    {kCols.map(col => (
+                    {(kCols || []).map(col => (
                       <th key={col} className="p-4 text-xs font-black text-blue-700 uppercase tracking-widest whitespace-nowrap text-right">
                         {col}
                       </th>
@@ -211,17 +211,17 @@ export default function Tab6_ML() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {(clusterResult as any )?.cluster_centers.map((row: any, i: number) => (
+                  {(clusterResult as any).cluster_centers.map((row: any, i: number) => (
                     <tr key={i} className="hover:bg-blue-50/50 transition-colors group">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <div className="w-3 h-3 rounded-full shadow-inner" style={{ backgroundColor: CLUSTER_COLORS[i % CLUSTER_COLORS.length] }}></div>
-                          <span className="text-sm font-black text-slate-800 group-hover:text-blue-700 transition-colors">{row.cluster}</span>
+                          <span className="text-sm font-black text-slate-800 group-hover:text-blue-700 transition-colors">{row?.cluster || `Cụm ${i+1}`}</span>
                         </div>
                       </td>
-                      {kCols.map(col => (
+                      {(kCols || []).map(col => (
                         <td key={col} className="p-4 text-sm font-bold text-slate-600 text-right font-mono">
-                          {row[col]}
+                          {row?.[col] ?? '0'}
                         </td>
                       ))}
                     </tr>
