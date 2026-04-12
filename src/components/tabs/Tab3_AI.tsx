@@ -1,5 +1,7 @@
+"use client"
+
 import { useState, useRef, useMemo } from 'react';
-import { Brain, LayoutDashboard, Download, Sparkles } from 'lucide-react';
+import { Brain, LayoutDashboard, Download, Sparkles, AlertCircle } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, AreaChart, Area
@@ -10,7 +12,7 @@ import { useAppData } from '../../hooks/useAppData';
 import { apiAiSummary, apiSuggestDashboard } from '../../lib/api';
 import { computeStats } from '../../lib/dataUtils';
 
-const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#f97316'];
+const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#f97316', '#0ea5e9', '#d946ef'];
 
 interface ChartSuggestion {
   title: string;
@@ -20,17 +22,20 @@ interface ChartSuggestion {
   agg: string;
 }
 
-// Hàm xử lý dữ liệu biểu đồ
+// Hàm xử lý dữ liệu biểu đồ an toàn
 function buildChartData(rawData: any[], suggestion: ChartSuggestion) {
+  if (!rawData || rawData.length === 0) return [];
   const { x, y, agg } = suggestion;
+  
   if (suggestion.type === 'Pie') {
     const counts: Record<string, number> = {};
     for (const row of rawData) {
       const key = String(row[x] ?? 'N/A');
       counts[key] = (counts[key] ?? 0) + 1;
     }
-    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+    return Object.entries(counts).map(([name, value]) => ({ name, value })).slice(0, 10); // Giới hạn 10 lát cắt cho đẹp
   }
+
   const grouped: Record<string, number[]> = {};
   for (const row of rawData) {
     const key = String(row[x] ?? 'N/A');
@@ -40,54 +45,76 @@ function buildChartData(rawData: any[], suggestion: ChartSuggestion) {
       grouped[key].push(val); 
     }
   }
+
   return Object.entries(grouped).map(([name, vals]) => {
-    const aggVal = agg === 'sum' ? vals.reduce((a, b) => a + b, 0) : agg === 'count' ? vals.length : +(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2);
+    let aggVal = 0;
+    if (vals.length > 0) {
+      if (agg === 'sum') aggVal = vals.reduce((a, b) => a + b, 0);
+      else if (agg === 'count') aggVal = vals.length;
+      else aggVal = +(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2);
+    }
     return { name, value: aggVal };
-  }).slice(0, 20);
+  }).slice(0, 15);
 }
 
-// Component biểu đồ nhỏ
+// Component biểu đồ nhỏ (Đã bọc chống lỗi)
 function MiniChart({ suggestion, data, index }: { suggestion: ChartSuggestion; data: any[]; index: number }) {
   const chartData = useMemo(() => buildChartData(data, suggestion), [data, suggestion]);
   const color = COLORS[index % COLORS.length];
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-      <p className="text-xs font-semibold text-gray-600 mb-3 truncate" title={suggestion.title}>{suggestion.title}</p>
-      <ResponsiveContainer width="100%" height={160}>
-        {suggestion.type === 'Pie' ? (
-          <PieChart>
-            <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label={({ percent }) => `${(percent * 100).toFixed(0)}%`} fontSize={9}>
-              {chartData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-            </Pie>
-            <Tooltip />
-          </PieChart>
-        ) : suggestion.type === 'Line' ? (
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-            <XAxis dataKey="name" tick={{ fontSize: 9 }} hide={chartData.length > 5} />
-            <YAxis tick={{ fontSize: 9 }} />
-            <Tooltip />
-            <Line type="monotone" dataKey="value" stroke={color} strokeWidth={2} dot={false} />
-          </LineChart>
-        ) : suggestion.type === 'Area' ? (
-          <AreaChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-            <XAxis dataKey="name" tick={{ fontSize: 9 }} hide={chartData.length > 5} />
-            <YAxis tick={{ fontSize: 9 }} />
-            <Tooltip />
-            <Area type="monotone" dataKey="value" stroke={color} fill={color} fillOpacity={0.1} strokeWidth={2} />
-          </AreaChart>
-        ) : (
-          <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-            <XAxis dataKey="name" tick={{ fontSize: 9 }} hide={chartData.length > 5} />
-            <YAxis tick={{ fontSize: 9 }} />
-            <Tooltip />
-            <Bar dataKey="value" fill={color} radius={[3, 3, 0, 0]} />
-          </BarChart>
-        )}
-      </ResponsiveContainer>
+    <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm hover:shadow-md transition-shadow">
+      <p className="text-xs font-bold text-slate-700 mb-3 truncate uppercase tracking-tight" title={suggestion.title}>
+        {suggestion.title}
+      </p>
+      
+      {/* BỌC CHỐNG LỖI: Nếu không có dữ liệu thì hiện cảnh báo chứ không vẽ biểu đồ rỗng */}
+      {!chartData || chartData.length === 0 ? (
+        <div className="w-full h-[160px] flex flex-col items-center justify-center text-slate-400 bg-slate-50 rounded-lg">
+          <AlertCircle className="w-6 h-6 mb-2 opacity-50" />
+          <span className="text-[10px] font-semibold">Dữ liệu rỗng</span>
+        </div>
+      ) : (
+        <ResponsiveContainer width="100%" height={160}>
+          {suggestion.type === 'Pie' ? (
+            <PieChart>
+              <Pie 
+                data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" 
+                outerRadius={60} innerRadius={30} // Chuyển thành Doughnut cho hiện đại
+                label={({ percent }) => `${(percent * 100).toFixed(0)}%`} 
+                labelLine={false} fontSize={9} fontWeight="bold"
+              >
+                {chartData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+              </Pie>
+              <Tooltip contentStyle={{borderRadius: '8px', fontSize: '11px'}} />
+            </PieChart>
+          ) : suggestion.type === 'Line' ? (
+            <LineChart data={chartData} margin={{top: 5, right: 5, left: -20, bottom: 0}}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#64748b' }} hide={chartData.length > 8} />
+              <YAxis tick={{ fontSize: 9, fill: '#64748b' }} />
+              <Tooltip contentStyle={{borderRadius: '8px', fontSize: '11px'}} />
+              <Line type="monotone" dataKey="value" stroke={color} strokeWidth={3} dot={{r: 2, fill: color}} activeDot={{r: 4}} />
+            </LineChart>
+          ) : suggestion.type === 'Area' ? (
+            <AreaChart data={chartData} margin={{top: 5, right: 5, left: -20, bottom: 0}}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#64748b' }} hide={chartData.length > 8} />
+              <YAxis tick={{ fontSize: 9, fill: '#64748b' }} />
+              <Tooltip contentStyle={{borderRadius: '8px', fontSize: '11px'}} />
+              <Area type="monotone" dataKey="value" stroke={color} fill={color} fillOpacity={0.2} strokeWidth={2} />
+            </AreaChart>
+          ) : (
+            <BarChart data={chartData} margin={{top: 5, right: 5, left: -20, bottom: 0}}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#64748b' }} hide={chartData.length > 8} />
+              <YAxis tick={{ fontSize: 9, fill: '#64748b' }} />
+              <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '8px', fontSize: '11px'}} />
+              <Bar dataKey="value" fill={color} radius={[4, 4, 0, 0]} />
+            </BarChart>
+          )}
+        </ResponsiveContainer>
+      )}
     </div>
   );
 }
@@ -96,20 +123,16 @@ export default function Tab3_AI() {
   const { t } = useLang();
   const { data, rawFile, aiReport, setAiReport, suggestions, setSuggestions } = useAppData();
   
-  // Ref để chụp ảnh dashboard
   const dashboardRef = useRef<HTMLDivElement>(null);
 
-  // States
   const [analyzing, setAnalyzing] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [exporting, setExporting] = useState(false);
 
-  // Tính toán stats
   const stats = useMemo(() => (data.length > 0 ? computeStats(data) : null), [data]);
 
   const handleAiSummary = async () => {
-    if (!rawFile) return;
-    if (!stats) return; 
+    if (!rawFile || !stats) return; 
 
     setAnalyzing(true);
     try {
@@ -122,31 +145,32 @@ export default function Tab3_AI() {
       }));
 
       const res = await apiAiSummary(formData);
-      setAiReport(res.ai_report ?? 'Không nhận được phản hồi từ AI.');
+      setAiReport(res.ai_report ?? 'Hệ thống đã phân tích hoàn tất nhưng không nhận được văn bản.');
     } catch (err) {
-      setAiReport('Lỗi kết nối AI.');
+      setAiReport('Đã xảy ra lỗi kết nối. Vui lòng kiểm tra lại cấu hình API.');
     } finally {
       setAnalyzing(false);
     }
   };
 
   const handleGenerateDashboard = async () => {
-    if (!rawFile) return;
+    if (!rawFile || data.length === 0) return;
     setGenerating(true);
     try {
       const res = await apiSuggestDashboard(rawFile);
-      if (res.status === 'success') {
+      if (res.status === 'success' && res.suggestions) {
         let s = res.suggestions as ChartSuggestion[];
         if (s.length < 6) {
-          const extra = buildFallbackSuggestions(6 - s.length);
+          const extra = buildFallbackSuggestions(6 - s.length, data);
           s = [...s, ...extra];
         }
         setSuggestions(s.slice(0, 6));
       } else {
-        setSuggestions(buildFallbackSuggestions(6));
+        setSuggestions(buildFallbackSuggestions(6, data));
       }
     } catch {
-      setSuggestions(buildFallbackSuggestions(6));
+      // Gọi AI lỗi -> Tự động dùng fallback tự quét cột
+      setSuggestions(buildFallbackSuggestions(6, data));
     } finally {
       setGenerating(false);
     }
@@ -156,10 +180,10 @@ export default function Tab3_AI() {
     if (!dashboardRef.current) return;
     setExporting(true);
     try {
-      const png = await toPng(dashboardRef.current, { backgroundColor: '#ffffff', quality: 0.95, pixelRatio: 2 });
+      const png = await toPng(dashboardRef.current, { backgroundColor: '#f8fafc', quality: 0.95, pixelRatio: 2 });
       const a = document.createElement('a');
       a.href = png;
-      a.download = `dashboard-${new Date().getTime()}.png`;
+      a.download = `AI-Dashboard-${new Date().getTime()}.png`;
       a.click();
     } catch (e) {
       console.error(e);
@@ -170,87 +194,117 @@ export default function Tab3_AI() {
 
   if (data.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-        <Brain className="w-12 h-12 mb-3 opacity-30" />
-        <p>{t('pleaseUpload')}</p>
+      <div className="flex flex-col items-center justify-center h-[50vh] text-slate-400 animate-in fade-in">
+        <Brain className="w-16 h-16 mb-4 opacity-20" />
+        <p className="font-bold uppercase tracking-widest text-sm">{t('pleaseUpload') || 'Vui lòng tải dữ liệu lên trước'}</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* AI Analysis Section */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-blue-500" />
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      
+      {/* Nút Tạo Dashboard AI & Xuất Ảnh */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-inner">
+            <LayoutDashboard className="w-6 h-6 text-indigo-600" />
           </div>
-          <h3 className="font-semibold text-gray-700">{t('aiEvaluateAll')}</h3>
+          <div>
+            <h3 className="font-black text-slate-800 text-lg uppercase tracking-tight">AI Auto Dashboard</h3>
+            <p className="text-xs font-medium text-slate-500">Hệ thống tự động thiết kế 6 biểu đồ trực quan</p>
+          </div>
         </div>
-        <button
-          onClick={handleAiSummary}
-          disabled={analyzing || !rawFile}
-          className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50 transition shadow-md shadow-blue-100"
-        >
-          {analyzing ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />{t('analyzing')}</> : <><Brain className="w-4 h-4" />{t('aiEvaluateAll')}</>}
-        </button>
+        
+        <div className="flex gap-3 w-full md:w-auto">
+          <button
+            onClick={handleGenerateDashboard}
+            disabled={generating || !rawFile}
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-md active:scale-95"
+          >
+            {generating ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            {generating ? 'ĐANG TẠO...' : 'TẠO DASHBOARD MỚI'}
+          </button>
+          
+          {suggestions.length > 0 && (
+            <button
+              onClick={handleExportJpg}
+              disabled={exporting}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-slate-800 text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-slate-900 disabled:opacity-50 transition-all shadow-md active:scale-95"
+            >
+              <Download className="w-4 h-4" />
+              {exporting ? 'ĐANG LƯU...' : 'XUẤT ẢNH JPG'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Lưới hiển thị 6 Biểu đồ */}
+      {suggestions.length > 0 && (
+        <div ref={dashboardRef} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 bg-slate-50 p-6 rounded-3xl border border-slate-100 shadow-inner"> 
+          {suggestions.map((s, i) => (
+            <MiniChart key={i} suggestion={s} data={data} index={i} />
+          ))}
+        </div>
+      )}
+
+      {/* AI Analysis Section (Phân tích tổng quát) */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-100 shadow-sm p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-md">
+              <Brain className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="font-black text-blue-900 uppercase">AI Phân Tích Dữ Liệu Tổng Quan</h3>
+              <p className="text-xs font-medium text-blue-700">Trích xuất Insights toàn diện từ tập dữ liệu</p>
+            </div>
+          </div>
+          <button
+            onClick={handleAiSummary}
+            disabled={analyzing || !rawFile}
+            className="flex items-center gap-2 bg-white text-blue-700 border border-blue-200 px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-50 disabled:opacity-50 transition-all shadow-sm active:scale-95"
+          >
+            {analyzing ? <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            {analyzing ? 'ĐANG QUÉT...' : 'YÊU CẦU PHÂN TÍCH'}
+          </button>
+        </div>
+        
         {aiReport && (
-          <div className="mt-4 bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-100 rounded-xl p-5 text-sm text-gray-700 leading-relaxed whitespace-pre-line shadow-inner">
+          <div className="mt-6 bg-white border border-blue-100 rounded-2xl p-6 text-sm text-slate-700 leading-relaxed text-justify whitespace-pre-line shadow-sm">
             {aiReport}
           </div>
         )}
       </div>
 
-      {/* Dashboard Section */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-          <div className="flex items-center gap-3 flex-1">
-            <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
-              <LayoutDashboard className="w-5 h-5 text-emerald-500" />
-            </div>
-            <h3 className="font-semibold text-gray-700">{t('dashboardTitle')}</h3>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={handleGenerateDashboard}
-              disabled={generating || !rawFile}
-              className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 transition shadow-md shadow-emerald-100"
-            >
-              {generating ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />{t('generating')}</> : t('generateDashboard')}
-            </button>
-            {suggestions.length > 0 && (
-              <button
-                onClick={handleExportJpg}
-                disabled={exporting}
-                className="flex items-center gap-2 bg-slate-700 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-800 disabled:opacity-50 transition"
-              >
-                <Download className="w-4 h-4" />
-                {exporting ? t('exporting') : t('exportDashboardImg')}
-              </button>
-            )}
-          </div>
-        </div>
-
-        {suggestions.length > 0 && (
-          <div ref={dashboardRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 bg-white p-2"> 
-            {suggestions.map((s, i) => (
-              <MiniChart key={i} suggestion={s} data={data} index={i} />
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 }
 
-function buildFallbackSuggestions(count: number): ChartSuggestion[] {
+// 🎯 HÀM NÀY ĐÃ ĐƯỢC NÂNG CẤP ĐỂ TỰ TÌM CỘT TRONG DATA CỦA BÀ, KHÔNG BỊ TRẮNG MÀN HÌNH NỮA
+function buildFallbackSuggestions(count: number, data: any[]): ChartSuggestion[] {
+  if (!data || data.length === 0) return [];
+
+  // Lấy danh sách cột thực tế
+  const cols = Object.keys(data[0]);
+  
+  // Tự động phân loại cột Số và cột Chữ
+  const numCols = cols.filter(c => data.some(r => !isNaN(Number(r[c])) && r[c] !== null && r[c] !== ''));
+  const catCols = cols.filter(c => data.some(r => isNaN(Number(r[c])) || typeof r[c] === 'string'));
+
+  // Lấy đại diện vài cột để vẽ
+  const x1 = catCols.length > 0 ? catCols[0] : cols[0];
+  const y1 = numCols.length > 0 ? numCols[0] : cols[0];
+  const y2 = numCols.length > 1 ? numCols[1] : y1;
+
   const all: ChartSuggestion[] = [
-    { title: 'Điểm Cuối kỳ TB theo Môn học', type: 'Bar', x: 'MON_HOC', y: 'DIEM_CUOI_KY', agg: 'mean' },
-    { title: 'Điểm Giữa kỳ TB theo Lớp', type: 'Bar', x: 'LOP', y: 'DIEM_GIUA_KY', agg: 'mean' },
-    { title: 'Phân bố Sinh viên theo Lớp', type: 'Pie', x: 'LOP', y: 'DIEM_CUOI_KY', agg: 'count' },
-    { title: 'Tổng Sinh viên theo Môn học', type: 'Bar', x: 'MON_HOC', y: 'DIEM_CUOI_KY', agg: 'count' },
-    { title: 'Biến động Điểm Chuyên cần theo Lớp', type: 'Line', x: 'LOP', y: 'DIEM_CHUYEN_CAN', agg: 'mean' },
-    { title: 'Điểm Bài tập nhóm theo Môn học', type: 'Area', x: 'MON_HOC', y: 'DIEM_NHOM', agg: 'mean' },
+    { title: `Điểm trung bình ${y1} theo ${x1}`, type: 'Bar', x: x1, y: y1, agg: 'mean' },
+    { title: `Phân bổ sinh viên theo ${x1}`, type: 'Pie', x: x1, y: y1, agg: 'count' },
+    { title: `Tổng ${y2} theo ${x1}`, type: 'Area', x: x1, y: y2, agg: 'sum' },
+    { title: `Biến động ${y1} giữa các ${x1}`, type: 'Line', x: x1, y: y1, agg: 'mean' },
+    { title: `Đếm số lượng theo ${x1} (Tròn)`, type: 'Pie', x: x1, y: y1, agg: 'count' },
+    { title: `Biểu đồ tần suất ${x1}`, type: 'Bar', x: x1, y: y1, agg: 'count' },
   ];
+  
   return all.slice(0, count);
 }
