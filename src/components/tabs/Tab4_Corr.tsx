@@ -139,48 +139,69 @@ export default function Tab4_Relations() {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
-      <div className="flex flex-col md:flex-row items-start gap-8 bg-white p-8 rounded-3xl border border-slate-100 shadow-sm overflow-x-auto">
-          {/* PHẦN 1: MA TRẬN CHÍNH */}
-          <div className="inline-block min-w-max">
-            <div className="grid gap-0" style={{ gridTemplateColumns: `140px repeat(${corrCols.length}, 80px)` }}>
-              <div />
-              {corrCols.map(c => (
-                <div key={c} className="text-center text-[11px] font-black text-slate-500 pb-3 px-1 uppercase tracking-tighter">
-                  {SCORE_LABELS[c] || c}
-                </div>
-              ))}
+      {/* CONTAINER CHÍNH: Cố định để không bị tràn layout */}
+        <div className="bg-white p-10 rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center justify-center overflow-hidden">
+          
+          <div className="flex flex-row items-start gap-12">
+            
+            {/* PHẦN 1: MA TRẬN HEATMAP (Ép kích thước ô cố định) */}
+            <div className="relative pt-12 pl-32"> {/* Tạo không gian cho tiêu đề trục */}
               
-              {corrCols.map(c1 => (
-                <div className="contents" key={`row-${c1}`}>
-                  <div className="text-[11px] font-black text-slate-500 pr-4 flex items-center justify-end text-right uppercase tracking-tighter h-[80px]">
+              {/* TIÊU ĐỀ TRỤC X (Nằm ngang trên đầu) */}
+              <div className="absolute top-0 left-32 right-0 grid" style={{ gridTemplateColumns: `repeat(${corrCols.length}, 80px)` }}>
+                {corrCols.map(c => (
+                  <div key={`header-x-${c}`} className="w-20 text-center text-[10px] font-black text-slate-500 uppercase tracking-tighter">
+                    {SCORE_LABELS[c] || c}
+                  </div>
+                ))}
+              </div>
+
+              {/* TIÊU ĐỀ TRỤC Y (Nằm dọc bên trái) */}
+              <div className="absolute top-12 left-0 bottom-0 flex flex-col justify-between h-[320px]">
+                {corrCols.map(c1 => (
+                  <div key={`header-y-${c1}`} className="h-20 w-28 flex items-center justify-end pr-4 text-[10px] font-black text-slate-500 uppercase tracking-tighter text-right">
                     {SCORE_LABELS[c1] || c1}
                   </div>
-                  {corrCols.map(c2 => {
+                ))}
+              </div>
+
+              {/* LƯỚI Ô GIÁ TRỊ (80px x 80px mỗi ô) */}
+              <div className="grid border border-slate-200" style={{ gridTemplateColumns: `repeat(${corrCols.length}, 80px)` }}>
+                {corrCols.map(c1 => (
+                  corrCols.map(c2 => {
                     const val = corrMatrix[c1]?.[c2] ?? 0;
                     return (
                       <div
                         key={`${c1}-${c2}`}
-                        className="border-[0.5px] border-white/20 flex items-center justify-center font-bold text-[14px] transition-all hover:brightness-90 cursor-default"
-                        style={{ background: heatColor(val), height: 80, width: 80, color: getTextColor(val) }}
+                        className="w-20 h-20 border-[0.5px] border-white/30 flex items-center justify-center font-black text-[15px] transition-transform hover:scale-105 hover:z-10 cursor-default"
+                        style={{ background: heatColor(val), color: getTextColor(val) }}
+                        title={`${SCORE_LABELS[c1]} x ${SCORE_LABELS[c2]}: ${val}`}
                       >
                         {val.toFixed(2)}
                       </div>
                     );
-                  })}
-                </div>
-              ))}
+                  })
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* PHẦN 2: THANH THƯỚC ĐO (COLOR BAR) - GIỐNG HỆT ẢNH MẪU */}
-          <div className="flex flex-col items-center pt-8">
-            <div className="w-6 h-[320px] rounded-sm shadow-inner relative border border-slate-200"
-                 style={{ background: 'linear-gradient(to bottom, rgb(103, 0, 13), #ffffff, rgb(33, 102, 172))' }}>
-              <span className="absolute -right-8 top-0 text-[10px] font-black text-slate-600">1.0</span>
-              <span className="absolute -right-8 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-600">0.0</span>
-              <span className="absolute -right-8 bottom-0 text-[10px] font-black text-slate-600">-1.0</span>
+            {/* PHẦN 2: THANH THƯỚC ĐO (COLOR BAR) - Căn giữa theo chiều dọc */}
+            <div className="flex flex-col items-center pt-12">
+              <div className="w-5 h-[320px] rounded-full shadow-inner relative border border-slate-100"
+                   style={{ background: 'linear-gradient(to bottom, rgb(103, 0, 13), #ffffff, rgb(33, 102, 172))' }}>
+                <span className="absolute -right-8 top-0 text-[10px] font-black text-slate-400">1.0</span>
+                <span className="absolute -right-8 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">0.0</span>
+                <span className="absolute -right-8 bottom-0 text-[10px] font-black text-slate-400">-1.0</span>
+              </div>
+              <p className="mt-6 text-[9px] font-black text-slate-300 uppercase tracking-widest" style={{writingMode: 'vertical-rl'}}>Hệ số Pearson</p>
             </div>
-            <p className="mt-4 text-[10px] font-black text-slate-400 uppercase vertical-text" style={{writingMode: 'vertical-rl'}}>Hệ số Pearson</p>
+
+          </div>
+          
+          {/* CHÚ GIẢI NHANH Ở DƯỚI */}
+          <div className="mt-12 flex gap-8 text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-6 py-2 rounded-full border border-slate-100">
+            <span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[rgb(103,0,13)]"></div> Tương quan thuận</span>
+            <span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[rgb(33,102,172)]"></div> Tương quan nghịch</span>
           </div>
         </div>
 
