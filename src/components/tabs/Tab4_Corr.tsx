@@ -23,25 +23,32 @@ const SCORE_LABELS: Record<string, string> = {
 // 🌡️ HÀM NÀY ĐÃ ĐƯỢC ĐỘ LẠI: TẠO HIỆU ỨNG NHIỆT ĐỘ NÓNG - LẠNH (ĐỎ -> TRẮNG -> XANH)
 // Hàm tạo màu Đỏ (Nghịch) -> Trắng (0) -> Xanh dương (Thuận)
 function heatColor(val: number): string {
-  if (isNaN(val) || val === 0) return '#ffffff';
+  if (isNaN(val)) return '#f8fafc';
+  
+  // Dùng dải màu RdBu (Red-White-Blue)
+  // positive (thuận): Xanh dương | negative (nghịch): Đỏ
   const intensity = Math.abs(val);
+  const v = Math.round(255 * (1 - intensity));
+  
   if (val > 0) {
-    // Tương quan thuận: Xanh dương
-    const r = Math.round(255 - intensity * (255 - 59));
-    const g = Math.round(255 - intensity * (255 - 130));
-    const b = Math.round(255 - intensity * (255 - 246));
+    // Chuyển từ trắng (255,255,255) sang Đỏ Đậm (165,0,38) 
+    // (Để giống ảnh mẫu bà gửi: Tương quan thuận là màu Đỏ Đô)
+    const r = Math.round(255 - intensity * (255 - 103));
+    const g = Math.round(255 - intensity * (255 - 0));
+    const b = Math.round(255 - intensity * (255 - 13));
     return `rgb(${r}, ${g}, ${b})`;
-  } else {
-    // Tương quan nghịch: Đỏ
-    const r = Math.round(255 - intensity * (255 - 239));
-    const g = Math.round(255 - intensity * (255 - 68));
-    const b = Math.round(255 - intensity * (255 - 68));
+  } else if (val < 0) {
+    // Tương quan nghịch: Xanh dương chuẩn ảnh mẫu
+    const r = Math.round(255 - intensity * (255 - 33));
+    const g = Math.round(255 - intensity * (255 - 102));
+    const b = Math.round(255 - intensity * (255 - 172));
     return `rgb(${r}, ${g}, ${b})`;
   }
+  return '#ffffff';
 }
 
 function getTextColor(val: number): string {
-  return Math.abs(val) > 0.6 ? '#ffffff' : '#334155';
+  return Math.abs(val) > 0.5 ? '#ffffff' : '#1e293b';
 }
 
 
@@ -132,64 +139,50 @@ export default function Tab4_Relations() {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
-      {/* KHU VỰC 1: BẢN ĐỒ NHIỆT (ĐÃ THÊM NÓNG LẠNH VÀ TRỤC X Y) */}
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10 opacity-50"></div>
-        <h3 className="font-black text-slate-800 text-xl mb-1 uppercase tracking-tight flex items-center gap-2">
-          <Network className="w-6 h-6 text-blue-600" />
-          {t('heatmapTitle') || 'Ma trận hệ số tương quan (Heatmap)'}
-        </h3>
-        <p className="text-sm font-medium text-slate-500 mb-8">{t('heatmapDesc') || 'Đánh giá mức độ ảnh hưởng tuyến tính giữa các cột điểm thành phần.'}</p>
-
-        {corrCols.length > 0 ? (
-          <div className="overflow-x-auto custom-scrollbar pb-6 relative">
-            <div className="inline-block min-w-max p-4 bg-white border border-slate-200 rounded-xl">
-              <div className="grid gap-1" style={{ gridTemplateColumns: `120px repeat(${corrCols.length}, 100px)` }}>
-                {/* Ô góc trên cùng bên trái (Trống) */}
-                <div className="flex items-end justify-end pb-2 pr-2 text-xs font-black text-slate-400 uppercase">
-                  Y \ X
+      <div className="flex flex-col md:flex-row items-start gap-8 bg-white p-8 rounded-3xl border border-slate-100 shadow-sm overflow-x-auto">
+          {/* PHẦN 1: MA TRẬN CHÍNH */}
+          <div className="inline-block min-w-max">
+            <div className="grid gap-0" style={{ gridTemplateColumns: `140px repeat(${corrCols.length}, 80px)` }}>
+              <div />
+              {corrCols.map(c => (
+                <div key={c} className="text-center text-[11px] font-black text-slate-500 pb-3 px-1 uppercase tracking-tighter">
+                  {SCORE_LABELS[c] || c}
                 </div>
-                
-                {/* TÊN CỘT TRỤC X */}
-                {corrCols.map(c => (
-                  <div key={`col-${c}`} className="text-center text-[11px] font-bold text-slate-700 pb-2 px-1 break-words">
-                    {SCORE_LABELS[c] || c}
+              ))}
+              
+              {corrCols.map(c1 => (
+                <div className="contents" key={`row-${c1}`}>
+                  <div className="text-[11px] font-black text-slate-500 pr-4 flex items-center justify-end text-right uppercase tracking-tighter h-[80px]">
+                    {SCORE_LABELS[c1] || c1}
                   </div>
-                ))}
-                
-                {/* TÊN CỘT TRỤC Y VÀ CÁC Ô GIÁ TRỊ (VALUE) */}
-                {corrCols.map(c1 => (
-                  <div className="contents" key={`row-wrap-${c1}`}>
-                    <div className="text-[11px] font-bold text-slate-700 pr-3 flex items-center justify-end text-right break-words border-r-2 border-slate-100 mr-1">
-                      {SCORE_LABELS[c1] || c1}
-                    </div>
-                    {corrCols.map(c2 => {
-                      const val = corrMatrix[c1]?.[c2] ?? 0;
-                      return (
-                        <div
-                          key={`${c1}-${c2}`}
-                          className="m-0.5 rounded-lg flex items-center justify-center font-bold text-[13px] shadow-sm transition-transform hover:scale-110 cursor-pointer"
-                          style={{ background: heatColor(val), height: 60, color: getTextColor(val) }}
-                          title={`${SCORE_LABELS[c1]} và ${SCORE_LABELS[c2]}\nHệ số tương quan: ${val}`}
-                        >
-                          {val.toFixed(2)}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
+                  {corrCols.map(c2 => {
+                    const val = corrMatrix[c1]?.[c2] ?? 0;
+                    return (
+                      <div
+                        key={`${c1}-${c2}`}
+                        className="border-[0.5px] border-white/20 flex items-center justify-center font-bold text-[14px] transition-all hover:brightness-90 cursor-default"
+                        style={{ background: heatColor(val), height: 80, width: 80, color: getTextColor(val) }}
+                      >
+                        {val.toFixed(2)}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
           </div>
-        ) : <p className="text-slate-400 text-center py-8">{t('noData')}</p>}
 
-        {/* Chú giải Nhiệt độ */}
-        <div className="mt-4 flex items-center justify-center gap-4 text-xs font-bold text-slate-600 bg-white p-3 rounded-xl border border-slate-100 shadow-sm inline-flex mx-auto">
-          <span className="flex items-center gap-2"><div className="w-4 h-4 rounded bg-[#ef4444]"></div> Tỷ lệ nghịch (-1)</span>
-          <span className="flex items-center gap-2"><div className="w-4 h-4 rounded bg-[#f8fafc] border border-slate-200"></div> Không liên quan (0)</span>
-          <span className="flex items-center gap-2"><div className="w-4 h-4 rounded bg-[#3b82f6]"></div> Tỷ lệ thuận (+1)</span>
+          {/* PHẦN 2: THANH THƯỚC ĐO (COLOR BAR) - GIỐNG HỆT ẢNH MẪU */}
+          <div className="flex flex-col items-center pt-8">
+            <div className="w-6 h-[320px] rounded-sm shadow-inner relative border border-slate-200"
+                 style={{ background: 'linear-gradient(to bottom, rgb(103, 0, 13), #ffffff, rgb(33, 102, 172))' }}>
+              <span className="absolute -right-8 top-0 text-[10px] font-black text-slate-600">1.0</span>
+              <span className="absolute -right-8 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-600">0.0</span>
+              <span className="absolute -right-8 bottom-0 text-[10px] font-black text-slate-600">-1.0</span>
+            </div>
+            <p className="mt-4 text-[10px] font-black text-slate-400 uppercase vertical-text" style={{writingMode: 'vertical-rl'}}>Hệ số Pearson</p>
+          </div>
         </div>
-      </div>
 
       {/* KHU VỰC 2: PHÂN BỐ ĐIỂM SỐ */}
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
