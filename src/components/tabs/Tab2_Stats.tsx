@@ -103,9 +103,9 @@ export default function Tab2_Stats() {
         <StatCard label="Tỷ lệ đạt" value={`${stats.passRate}%`} icon={<CheckCircle className="w-5 h-5" />} color="bg-rose-600" />
       </div>
 
-      {/* BIỂU ĐỒ TRÒN & CƠ CẤU */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
+      {/* BIỂU ĐỒ TRÒN & CƠ CẤU (ĐÃ SỬA THÀNH CHIA ĐÔI MÀN HÌNH ĐỂ PIE CHART TO RA) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
            <div className="flex items-center justify-between mb-8">
               <h3 className="font-bold text-slate-800 text-lg">Cấu trúc học lực theo môn</h3>
               <select className="bg-slate-50 border-none rounded-xl px-4 py-2 text-sm font-medium text-slate-600 outline-none ring-1 ring-slate-200 focus:ring-blue-500" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
@@ -113,60 +113,44 @@ export default function Tab2_Stats() {
                 {classes.slice(1).map(c => <option key={c} value={c}>{c}</option>)}
               </select>
            </div>
-           <ResponsiveContainer width="100%" height={380}>
-          <ComposedChart data={boxData} margin={{ bottom: 50 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-            <XAxis dataKey="subject" tick={{ fontSize: 11, fill: '#64748b', fontWeight: 600 }} angle={-25} textAnchor="end" interval={0} height={60} />
-            <YAxis domain={[0, 10]} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 600 }} />
-            <Tooltip content={<BoxTooltip />} cursor={{ fill: '#f8fafc' }} />
-            
-            {/* Lớp móng (Tàng hình) */}
-            <Bar dataKey="q1" stackId="box" fill="transparent" />
-            
-            {/* Nửa dưới của hộp (Q1 - Median) */}
-            <Bar dataKey="median" name="Q1 - Median" stackId="box">
-              {boxData?.map((entry: any, index: number) => (
-                <Cell key={`cell-bottom-${index}`} fill={BOX_COLORS[index % BOX_COLORS.length]} fillOpacity={0.5} />
+           <ResponsiveContainer width="100%" height={350}>
+            <BarChart data={classData} margin={{ bottom: 40 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis dataKey="subject" tick={{ fontSize: 11, fill: '#64748b' }} angle={-25} textAnchor="end" interval={0} />
+              <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
+              <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}} />
+              <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{paddingBottom: '20px', fontSize: '12px'}} />
+              {Object.keys(LEVEL_COLORS).map(level => (
+                <Bar key={level} dataKey={level} stackId="a" fill={LEVEL_COLORS[level]} barSize={40} radius={0} />
               ))}
-            </Bar>
-            
-            {/* Nửa trên của hộp (Median - Q3) */}
-            <Bar dataKey="q3" name="Median - Q3" stackId="box">
-              {boxData?.map((entry: any, index: number) => (
-                <Cell key={`cell-top-${index}`} fill={BOX_COLORS[index % BOX_COLORS.length]} fillOpacity={0.8} />
-              ))}
-            </Bar>
-            
-            {/* Điểm trung bình (Đường đỏ) */}
-            <Line type="monotone" dataKey="mean" stroke="#ef4444" strokeWidth={3} dot={{ r: 5, fill: '#fff', stroke: '#ef4444', strokeWidth: 2 }} activeDot={{ r: 7 }} name="Điểm trung bình" />
-          </ComposedChart>
-        </ResponsiveContainer>
+            </BarChart>
+          </ResponsiveContainer>
         </div>
 
         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 flex flex-col">
           <h3 className="font-bold text-slate-800 text-lg mb-6 text-center">Phân phối tổng quát</h3>
           <div className="relative flex-1 flex items-center justify-center">
-            <ResponsiveContainer width="100%" height={260}>
+            <ResponsiveContainer width="100%" height={300}>
               <PieChart>
-                <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={70} outerRadius={100} paddingAngle={5}>
+                <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={80} outerRadius={120} paddingAngle={5}>
                   {pieData.map((entry, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} stroke="none" />)}
                 </Pie>
-                <Tooltip />
+                <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}} />
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="grid grid-cols-2 gap-3 mt-4">
+          <div className="flex flex-wrap justify-center gap-3 mt-4">
             {pieData.map((entry, i) => (
-              <div key={i} className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-100">
-                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
-                <span className="text-[11px] font-bold text-slate-700">{entry.name}: {entry.value}</span>
+              <div key={i} className="flex items-center gap-2 p-2 px-3 rounded-xl bg-slate-50 border border-slate-100">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                <span className="text-[12px] font-bold text-slate-700">{entry.name}: {entry.value}</span>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* BOXPLOT SECTION */}
+      {/* BOXPLOT SECTION (ĐÃ CẬP NHẬT ĐA SẮC MÀU) */}
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 overflow-hidden" ref={boxRef}>
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>
@@ -182,12 +166,17 @@ export default function Tab2_Stats() {
         <ResponsiveContainer width="100%" height={380}>
           <ComposedChart data={boxData} margin={{ bottom: 50 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-            <XAxis dataKey="subject" tick={{ fontSize: 11, fill: '#64748b' }} angle={-25} textAnchor="end" interval={0} />
+            <XAxis dataKey="subject" tick={{ fontSize: 11, fill: '#64748b', fontWeight: 'bold' }} angle={-25} textAnchor="end" interval={0} />
             <YAxis domain={[0, 10]} tick={{ fontSize: 11, fill: '#64748b' }} />
             <Tooltip content={<BoxTooltip />} />
+            
             <Bar dataKey="q1" stackId="box" fill="transparent" />
-            <Bar dataKey="median" name="Q1 - Median" stackId="box" fill="#bfdbfe" />
-            <Bar dataKey="q3" name="Median - Q3" stackId="box" fill="#60a5fa" />
+            <Bar dataKey="median" name="Q1 - Median" stackId="box">
+              {boxData?.map((entry: any, index: number) => <Cell key={`b-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} fillOpacity={0.4} />)}
+            </Bar>
+            <Bar dataKey="q3" name="Median - Q3" stackId="box">
+              {boxData?.map((entry: any, index: number) => <Cell key={`t-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} fillOpacity={0.8} />)}
+            </Bar>
             <Line type="monotone" dataKey="mean" stroke="#ef4444" strokeWidth={2} dot={{ r: 5, fill: '#ef4444' }} name="Điểm trung bình" />
           </ComposedChart>
         </ResponsiveContainer>

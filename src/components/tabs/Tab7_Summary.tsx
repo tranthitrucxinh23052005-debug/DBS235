@@ -119,7 +119,7 @@ const handleExportPDF = async () => {
   }
 
   return (
-    <div className="space-y-6 pb-10">
+    <div id="report-content" className="space-y-6 pb-10">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatusCard title="Trạng thái Dữ liệu" desc={stats ? `${stats.total} sinh viên` : 'Chờ...'} active={!!stats} />
         <StatusCard title="Trí tuệ nhân tạo" desc={aiReport ? 'Đã có phân tích' : 'Chưa chạy'} active={!!aiReport} />

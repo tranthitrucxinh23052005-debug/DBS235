@@ -4,11 +4,10 @@ import { useState, useRef, useMemo } from 'react';
 import { Brain, LayoutDashboard, Download, Sparkles, AlertCircle } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, PieChart, Pie, Cell, AreaChart, Area
+  LineChart, Line, PieChart, Pie, Cell, AreaChart, Area, Legend
 } from 'recharts';
 import { toPng } from 'html-to-image';
 
-// Giữ nguyên các kho dữ liệu chính chủ của TX
 import { useLang } from '../../hooks/useLanguage';
 import { useAppData } from '../../hooks/useAppData';
 import { apiAiSummary, apiSuggestDashboard } from '../../lib/api';
@@ -45,7 +44,6 @@ function safeBuildChartData(rawData: any[], suggestion: ChartSuggestion) {
         .slice(0, 10);
     }
 
-    // Các biểu đồ khác (Bar, Line, Area) đều dùng chung {name, value}
     const grouped: Record<string, number[]> = {};
     for (const row of rawData) {
       if (!row) continue;
@@ -71,63 +69,63 @@ function safeBuildChartData(rawData: any[], suggestion: ChartSuggestion) {
   }
 }
 
-// 🛡️ Bọc thép cho từng Chart nhỏ
+// 🛡️ Component biểu đồ nhỏ (Đã sửa lỗi gọi lộn tên biến)
 function MiniChart({ suggestion, data, index }: { suggestion: ChartSuggestion; data: any[]; index: number }) {
-  const chartData = useMemo(() => {
-    const res = safeBuildChartData(data, suggestion);
-    return Array.isArray(res) ? res : [];
-  }, [data, suggestion]);
-
+  const chartData = useMemo<any[]>(() => safeBuildChartData(data, suggestion), [data, suggestion]);
   const color = CHART_COLORS[index % CHART_COLORS.length];
-  const safeTitle = suggestion?.title || 'Biểu đồ';
+  const safeTitle = suggestion?.title || 'Biểu đồ phân tích';
   const rawType = suggestion?.type || 'Bar';
-  // Nếu nhỡ có Scatter lọt vào, ép biến thành Bar để chống lỗi
   const type = rawType === 'Scatter' ? 'Bar' : rawType; 
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm hover:shadow-md transition-shadow h-[220px] flex flex-col">
-      <p className="text-xs font-bold text-slate-700 mb-3 truncate uppercase tracking-tight" title={safeTitle}>
+    <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm hover:shadow-lg transition-all h-[260px] flex flex-col">
+      <p className="text-xs font-black text-slate-700 mb-4 truncate uppercase tracking-widest border-b border-slate-50 pb-2" title={safeTitle}>
         {safeTitle}
       </p>
 
-      {chartData.length === 0 ? (
-        <div className="flex-1 w-full flex flex-col items-center justify-center text-slate-400 bg-slate-50 rounded-lg">
-          <AlertCircle className="w-6 h-6 mb-2 opacity-50" />
-          <span className="text-[10px] font-semibold">Dữ liệu rỗng</span>
+      {(!chartData || chartData.length === 0) ? (
+        <div className="flex-1 w-full flex flex-col items-center justify-center text-slate-400 bg-slate-50 rounded-xl">
+          <AlertCircle className="w-6 h-6 mb-2 opacity-40" />
+          <span className="text-[10px] font-bold uppercase tracking-widest">Thiếu dữ liệu</span>
         </div>
       ) : (
         <div className="flex-1 w-full min-h-0">
           <ResponsiveContainer width="100%" height="100%">
             {type === 'Pie' ? (
               <PieChart>
-                <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} innerRadius={30}>
+                <Pie 
+                  data={chartData} dataKey="value" nameKey="name" 
+                  cx="50%" cy="45%" 
+                  outerRadius={65} innerRadius={35}
+                >
                   {chartData.map((_, i) => <Cell key={`cell-${i}`} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                 </Pie>
-                <Tooltip contentStyle={{borderRadius: '8px', fontSize: '11px'}} />
+                <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', paddingTop: '10px' }} />
               </PieChart>
             ) : type === 'Line' ? (
               <LineChart data={chartData} margin={{top: 5, right: 5, left: -25, bottom: 0}}> 
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#64748b' }} />
+                <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#64748b', fontWeight: 'bold' }} />
                 <YAxis tick={{ fontSize: 9, fill: '#64748b' }} />
-                <Tooltip contentStyle={{borderRadius: '8px', fontSize: '11px'}} />
-                <Line type="monotone" dataKey="value" stroke={color} strokeWidth={3} dot={{r: 2}} />
+                <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                <Line type="monotone" dataKey="value" stroke={color} strokeWidth={3} dot={{r: 3, fill: color, strokeWidth: 2, stroke: '#fff'}} activeDot={{r: 5}} />
               </LineChart>
             ) : type === 'Area' ? (
               <AreaChart data={chartData} margin={{top: 5, right: 5, left: -25, bottom: 0}}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#64748b' }} />
+                <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#64748b', fontWeight: 'bold' }} />
                 <YAxis tick={{ fontSize: 9, fill: '#64748b' }} />
-                <Tooltip contentStyle={{borderRadius: '8px', fontSize: '11px'}} />
-                <Area type="monotone" dataKey="value" stroke={color} fill={color} fillOpacity={0.2} strokeWidth={2} />
+                <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                <Area type="monotone" dataKey="value" stroke={color} fill={color} fillOpacity={0.15} strokeWidth={3} />
               </AreaChart>
             ) : (
               <BarChart data={chartData} margin={{top: 5, right: 5, left: -25, bottom: 0}}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#64748b' }} />
+                <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#64748b', fontWeight: 'bold' }} />
                 <YAxis tick={{ fontSize: 9, fill: '#64748b' }} />
-                <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '8px', fontSize: '11px'}} />
-                <Bar dataKey="value" fill={color} radius={[4, 4, 0, 0]} />
+                <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                <Bar dataKey="value" fill={color} radius={[4, 4, 0, 0]} barSize={35} />
               </BarChart>
             )}
           </ResponsiveContainer>
@@ -297,9 +295,10 @@ export default function Tab3_AI() {
   );
 }
 
-// 🛡️ Quét dữ liệu cực an toàn
+// 🛡️ Hàm Vét đáy SIÊU THÔNG MINH (Đảm bảo 100% ra đủ 6 biểu đồ siêu xịn)
 function buildFallbackSuggestions(count: number, data: any[]): ChartSuggestion[] {
   if (!data || !Array.isArray(data) || data.length === 0) return [];
+  
   const firstRow = data.find(r => r && typeof r === 'object');
   if (!firstRow) return [];
 
@@ -309,15 +308,16 @@ function buildFallbackSuggestions(count: number, data: any[]): ChartSuggestion[]
 
   const x1 = catCols.length > 0 ? catCols[0] : cols[0];
   const y1 = numCols.length > 0 ? numCols[0] : cols[0];
+  const y2 = numCols.length > 1 ? numCols[1] : y1;
 
-  // Bất chấp thiếu cột, đảo phép toán để luôn có đủ 6 biểu đồ!
   const all: ChartSuggestion[] = [
-    { title: `Điểm trung bình ${y1} theo ${x1}`, type: 'Bar', x: x1, y: y1, agg: 'mean' },
-    { title: `Tỷ trọng ${x1} trong dữ liệu`, type: 'Pie', x: x1, y: y1, agg: 'count' },
-    { title: `Tổng tích lũy ${y1} phân bổ theo ${x1}`, type: 'Area', x: x1, y: y1, agg: 'sum' },
-    { title: `Dao động ${y1} giữa các nhóm ${x1}`, type: 'Line', x: x1, y: y1, agg: 'mean' },
-    { title: `Phân nhóm số lượng ${x1}`, type: 'Bar', x: x1, y: y1, agg: 'count' },
-    { title: `Tần suất khối lượng ${y1}`, type: 'Pie', x: x1, y: y1, agg: 'sum' },
+    { title: `Giá trị trung bình ${y1} theo ${x1}`, type: 'Bar', x: x1, y: y1, agg: 'mean' },
+    { title: `Tỷ trọng dữ liệu phân bổ theo ${x1}`, type: 'Pie', x: x1, y: y1, agg: 'count' },
+    { title: `Tổng giá trị tích lũy ${y2} theo ${x1}`, type: 'Area', x: x1, y: y2, agg: 'sum' },
+    { title: `Dao động giá trị cao nhất của ${y1}`, type: 'Line', x: x1, y: y1, agg: 'max' },
+    { title: `So sánh tần suất xuất hiện của ${x1}`, type: 'Bar', x: x1, y: y1, agg: 'count' },
+    { title: `Phân bổ tổng khối lượng ${y1}`, type: 'Pie', x: x1, y: y1, agg: 'sum' },
   ];
+  
   return all.slice(0, count);
 }

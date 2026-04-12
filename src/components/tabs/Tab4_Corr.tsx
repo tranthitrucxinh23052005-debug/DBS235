@@ -21,28 +21,29 @@ const SCORE_LABELS: Record<string, string> = {
 };
 
 // 🌡️ HÀM NÀY ĐÃ ĐƯỢC ĐỘ LẠI: TẠO HIỆU ỨNG NHIỆT ĐỘ NÓNG - LẠNH (ĐỎ -> TRẮNG -> XANH)
+// Hàm tạo màu Đỏ (Nghịch) -> Trắng (0) -> Xanh dương (Thuận)
 function heatColor(val: number): string {
-  if (val === 0 || isNaN(val)) return '#f8fafc'; // Màu xám nhạt trung tính
-  const intensity = Math.min(1, Math.abs(val));
+  if (isNaN(val) || val === 0) return '#ffffff';
+  const intensity = Math.abs(val);
   if (val > 0) {
-    // Tương quan thuận (+): Từ Trắng sang Xanh Dương Đậm
-    const r = Math.round(255 * (1 - intensity));
-    const g = Math.round(255 * (1 - intensity * 0.5)); // Giữ chút sắc xanh lam
-    const b = 255;
+    // Tương quan thuận: Xanh dương
+    const r = Math.round(255 - intensity * (255 - 59));
+    const g = Math.round(255 - intensity * (255 - 130));
+    const b = Math.round(255 - intensity * (255 - 246));
     return `rgb(${r}, ${g}, ${b})`;
   } else {
-    // Tương quan nghịch (-): Từ Trắng sang Đỏ Rực
-    const r = 255;
-    const g = Math.round(255 * (1 - intensity));
-    const b = Math.round(255 * (1 - intensity));
+    // Tương quan nghịch: Đỏ
+    const r = Math.round(255 - intensity * (255 - 239));
+    const g = Math.round(255 - intensity * (255 - 68));
+    const b = Math.round(255 - intensity * (255 - 68));
     return `rgb(${r}, ${g}, ${b})`;
   }
 }
 
-// 💡 Đổi màu chữ tự động để chống lóa mắt
 function getTextColor(val: number): string {
-  return Math.abs(val) > 0.5 ? '#ffffff' : '#334155';
+  return Math.abs(val) > 0.6 ? '#ffffff' : '#334155';
 }
+
 
 export default function Tab4_Relations() {
   const { t } = useLang();
@@ -142,42 +143,34 @@ export default function Tab4_Relations() {
 
         {corrCols.length > 0 ? (
           <div className="overflow-x-auto custom-scrollbar pb-6 relative">
-            <div className="inline-block min-w-max bg-slate-50 p-6 rounded-2xl border border-slate-200">
-              
-              {/* Nhãn Trục X */}
-              <div className="text-center font-black text-blue-600 uppercase tracking-widest text-xs mb-4 ml-[140px]">
-                Trục X (Biến số 2)
-              </div>
-
-              <div className="grid gap-1" style={{ gridTemplateColumns: `140px repeat(${corrCols.length}, 110px)` }}>
-                <div className="flex items-end justify-end pb-2 pr-2">
-                  {/* Nhãn Trục Y */}
-                  <span className="font-black text-rose-500 uppercase tracking-widest text-xs rotate-180" style={{ writingMode: 'vertical-rl' }}>
-                    Trục Y (Biến số 1)
-                  </span>
+            <div className="inline-block min-w-max p-4 bg-white border border-slate-200 rounded-xl">
+              <div className="grid gap-1" style={{ gridTemplateColumns: `120px repeat(${corrCols.length}, 100px)` }}>
+                {/* Ô góc trên cùng bên trái (Trống) */}
+                <div className="flex items-end justify-end pb-2 pr-2 text-xs font-black text-slate-400 uppercase">
+                  Y \ X
                 </div>
                 
-                {/* Header Cột */}
+                {/* TÊN CỘT TRỤC X */}
                 {corrCols.map(c => (
-                  <div key={c} className="text-center text-[11px] font-bold text-slate-600 pb-2 px-1 break-words">{SCORE_LABELS[c] || c}</div>
+                  <div key={`col-${c}`} className="text-center text-[11px] font-bold text-slate-700 pb-2 px-1 break-words">
+                    {SCORE_LABELS[c] || c}
+                  </div>
                 ))}
                 
+                {/* TÊN CỘT TRỤC Y VÀ CÁC Ô GIÁ TRỊ (VALUE) */}
                 {corrCols.map(c1 => (
                   <div className="contents" key={`row-wrap-${c1}`}>
-                    {/* Header Dòng */}
-                    <div key={`row-${c1}`} className="text-[11px] font-bold text-slate-600 pr-4 flex items-center justify-end text-right break-words border-r-2 border-slate-200 mr-2">
+                    <div className="text-[11px] font-bold text-slate-700 pr-3 flex items-center justify-end text-right break-words border-r-2 border-slate-100 mr-1">
                       {SCORE_LABELS[c1] || c1}
                     </div>
-                    
-                    {/* Các ô màu */}
                     {corrCols.map(c2 => {
                       const val = corrMatrix[c1]?.[c2] ?? 0;
                       return (
                         <div
                           key={`${c1}-${c2}`}
-                          className="m-0.5 rounded-xl flex items-center justify-center font-black text-[14px] shadow-sm transition-all hover:scale-110 hover:shadow-lg hover:z-10 cursor-crosshair border border-black/5"
-                          style={{ background: heatColor(val), height: 70, color: getTextColor(val) }}
-                          title={`${SCORE_LABELS[c1]} × ${SCORE_LABELS[c2]}\nHệ số: ${val}`}
+                          className="m-0.5 rounded-lg flex items-center justify-center font-bold text-[13px] shadow-sm transition-transform hover:scale-110 cursor-pointer"
+                          style={{ background: heatColor(val), height: 60, color: getTextColor(val) }}
+                          title={`${SCORE_LABELS[c1]} và ${SCORE_LABELS[c2]}\nHệ số tương quan: ${val}`}
                         >
                           {val.toFixed(2)}
                         </div>
