@@ -1,10 +1,8 @@
 import { useState, useMemo } from 'react';
-import { Cpu, Loader2, Sparkles, Network, Activity } from 'lucide-react';
-import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ZAxis} from 'recharts';
+import { Cpu, Loader2, Sparkles, Network, Activity, Brain, AlertCircle } from 'lucide-react';import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ZAxis} from 'recharts';
 import { useLang } from '../../hooks/useLanguage';
 import { useAppData } from '../../hooks/useAppData';
 import { apiKmeans, apiPredict, apiAiMlEval } from '../../lib/api'; 
-import { AlertCircle } from 'react-icons/fa';
 
 const CLUSTER_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
 // Tìm dòng này và thêm clusterResult vào
@@ -360,4 +358,3 @@ function ScatterTooltip({ active, payload }: { active?: boolean; payload?: any[]
   );
 }
 
-import { Brain } from 'lucide-react'; // Bổ sung icon Brain bị thiếu ở trên
