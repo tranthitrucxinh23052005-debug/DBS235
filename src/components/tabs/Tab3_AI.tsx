@@ -4,15 +4,17 @@ import { useState, useRef, useMemo } from 'react';
 import { Brain, LayoutDashboard, Download, Sparkles, AlertCircle } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, PieChart, Pie, Cell, AreaChart, Area, ScatterChart, Scatter
+  LineChart, Line, PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
 import { toPng } from 'html-to-image';
+
+// Giữ nguyên các kho dữ liệu chính chủ của TX
 import { useLang } from '../../hooks/useLanguage';
 import { useAppData } from '../../hooks/useAppData';
 import { apiAiSummary, apiSuggestDashboard } from '../../lib/api';
 import { computeStats } from '../../lib/dataUtils';
 
-const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#f97316', '#0ea5e9', '#d946ef'];
+const CHART_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#f97316', '#0ea5e9', '#d946ef'];
 
 interface ChartSuggestion {
   title: string;
@@ -22,10 +24,10 @@ interface ChartSuggestion {
   agg: string;
 }
 
-// 🛡️ Hàm xử lý dữ liệu bọc khiên chống sập
-function buildChartData(rawData: any[], suggestion: ChartSuggestion) {
+// 🛡️ Tối giản hóa Data: 100% trả về {name, value}, cấm tuyệt đối {x, y} để chống sập
+function safeBuildChartData(rawData: any[], suggestion: ChartSuggestion) {
   if (!rawData || !Array.isArray(rawData) || rawData.length === 0) return [];
-  if (!suggestion || !suggestion.x) return [];
+  if (!suggestion || !suggestion.x || !suggestion.y) return [];
 
   const { x, y, agg, type } = suggestion;
 
@@ -43,13 +45,7 @@ function buildChartData(rawData: any[], suggestion: ChartSuggestion) {
         .slice(0, 10);
     }
 
-    if (type === 'Scatter') {
-       return rawData
-         .map(r => ({ x: Number(r[x]), y: Number(r[y]) }))
-         .filter(d => !isNaN(d.x) && !isNaN(d.y))
-         .slice(0, 100);
-    }
-
+    // Các biểu đồ khác (Bar, Line, Area) đều dùng chung {name, value}
     const grouped: Record<string, number[]> = {};
     for (const row of rawData) {
       if (!row) continue;
@@ -75,73 +71,67 @@ function buildChartData(rawData: any[], suggestion: ChartSuggestion) {
   }
 }
 
-// 🛡️ Component biểu đồ nhỏ (An toàn 100%)
+// 🛡️ Bọc thép cho từng Chart nhỏ
 function MiniChart({ suggestion, data, index }: { suggestion: ChartSuggestion; data: any[]; index: number }) {
-  const chartData = useMemo<any[]>(() => buildChartData(data, suggestion), [data, suggestion]);
-  const color = COLORS[index % COLORS.length];
+  const chartData = useMemo(() => {
+    const res = safeBuildChartData(data, suggestion);
+    return Array.isArray(res) ? res : [];
+  }, [data, suggestion]);
+
+  const color = CHART_COLORS[index % CHART_COLORS.length];
   const safeTitle = suggestion?.title || 'Biểu đồ';
-  const type = suggestion?.type || 'Bar';
+  const rawType = suggestion?.type || 'Bar';
+  // Nếu nhỡ có Scatter lọt vào, ép biến thành Bar để chống lỗi
+  const type = rawType === 'Scatter' ? 'Bar' : rawType; 
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm hover:shadow-md transition-shadow">
+    <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm hover:shadow-md transition-shadow h-[220px] flex flex-col">
       <p className="text-xs font-bold text-slate-700 mb-3 truncate uppercase tracking-tight" title={safeTitle}>
         {safeTitle}
       </p>
 
-      {/* CHẶN SẬP: Trả về box xám nếu không có data vẽ */}
-      {(!chartData || chartData.length === 0) ? (
-        <div className="w-full h-[160px] flex flex-col items-center justify-center text-slate-400 bg-slate-50 rounded-lg">
+      {chartData.length === 0 ? (
+        <div className="flex-1 w-full flex flex-col items-center justify-center text-slate-400 bg-slate-50 rounded-lg">
           <AlertCircle className="w-6 h-6 mb-2 opacity-50" />
-          <span className="text-[10px] font-semibold">Không đủ dữ liệu</span>
+          <span className="text-[10px] font-semibold">Dữ liệu rỗng</span>
         </div>
       ) : (
-        <ResponsiveContainer width="100%" height={160}>
-          {type === 'Pie' ? (
-            <PieChart>
-              <Pie
-                data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%"
-                outerRadius={60} innerRadius={30}
-                label={({ percent }) => (percent && percent > 0) ? `${(percent * 100).toFixed(0)}%` : ''}
-                labelLine={false} fontSize={9} fontWeight="bold"
-              >
-                {chartData.map((_, i) => <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />)}
-              </Pie>
-              <Tooltip contentStyle={{borderRadius: '8px', fontSize: '11px'}} />
-            </PieChart>
-          ) : type === 'Line' ? (
-            <LineChart data={chartData} margin={{top: 5, right: 5, left: -20, bottom: 0}}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#64748b' }} hide={(chartData?.length || 0) > 8} />
-              <YAxis tick={{ fontSize: 9, fill: '#64748b' }} />
-              <Tooltip contentStyle={{borderRadius: '8px', fontSize: '11px'}} />
-              <Line type="monotone" dataKey="value" stroke={color} strokeWidth={3} dot={{r: 2, fill: color}} activeDot={{r: 4}} />
-            </LineChart>
-          ) : type === 'Area' ? (
-            <AreaChart data={chartData} margin={{top: 5, right: 5, left: -20, bottom: 0}}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#64748b' }} hide={(chartData?.length || 0) > 8} />
-              <YAxis tick={{ fontSize: 9, fill: '#64748b' }} />
-              <Tooltip contentStyle={{borderRadius: '8px', fontSize: '11px'}} />
-              <Area type="monotone" dataKey="value" stroke={color} fill={color} fillOpacity={0.2} strokeWidth={2} />
-            </AreaChart>
-          ) : type === 'Scatter' ? (
-            <ScatterChart margin={{top: 5, right: 5, left: -20, bottom: 0}}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis dataKey="x" type="number" tick={{ fontSize: 9, fill: '#64748b' }} />
-              <YAxis dataKey="y" type="number" tick={{ fontSize: 9, fill: '#64748b' }} />
-              <Tooltip cursor={{strokeDasharray: '3 3'}} contentStyle={{borderRadius: '8px', fontSize: '11px'}} />
-              <Scatter data={chartData} fill={color} />
-            </ScatterChart>
-          ) : (
-            <BarChart data={chartData} margin={{top: 5, right: 5, left: -20, bottom: 0}}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#64748b' }} hide={(chartData?.length || 0) > 8} />
-              <YAxis tick={{ fontSize: 9, fill: '#64748b' }} />
-              <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '8px', fontSize: '11px'}} />
-              <Bar dataKey="value" fill={color} radius={[4, 4, 0, 0]} />
-            </BarChart>
-          )}
-        </ResponsiveContainer>
+        <div className="flex-1 w-full min-h-0">
+          <ResponsiveContainer width="100%" height="100%">
+            {type === 'Pie' ? (
+              <PieChart>
+                <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} innerRadius={30}>
+                  {chartData.map((_, i) => <Cell key={`cell-${i}`} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                </Pie>
+                <Tooltip contentStyle={{borderRadius: '8px', fontSize: '11px'}} />
+              </PieChart>
+            ) : type === 'Line' ? (
+              <LineChart data={chartData} margin={{top: 5, right: 5, left: -25, bottom: 0}}> 
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#64748b' }} />
+                <YAxis tick={{ fontSize: 9, fill: '#64748b' }} />
+                <Tooltip contentStyle={{borderRadius: '8px', fontSize: '11px'}} />
+                <Line type="monotone" dataKey="value" stroke={color} strokeWidth={3} dot={{r: 2}} />
+              </LineChart>
+            ) : type === 'Area' ? (
+              <AreaChart data={chartData} margin={{top: 5, right: 5, left: -25, bottom: 0}}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#64748b' }} />
+                <YAxis tick={{ fontSize: 9, fill: '#64748b' }} />
+                <Tooltip contentStyle={{borderRadius: '8px', fontSize: '11px'}} />
+                <Area type="monotone" dataKey="value" stroke={color} fill={color} fillOpacity={0.2} strokeWidth={2} />
+              </AreaChart>
+            ) : (
+              <BarChart data={chartData} margin={{top: 5, right: 5, left: -25, bottom: 0}}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#64748b' }} />
+                <YAxis tick={{ fontSize: 9, fill: '#64748b' }} />
+                <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '8px', fontSize: '11px'}} />
+                <Bar dataKey="value" fill={color} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            )}
+          </ResponsiveContainer>
+        </div>
       )}
     </div>
   );
@@ -149,15 +139,14 @@ function MiniChart({ suggestion, data, index }: { suggestion: ChartSuggestion; d
 
 export default function Tab3_AI() {
   const { t } = useLang();
-const { data, rawFile, aiReport, setAiReport } = useAppData();
-const [suggestions, setSuggestions] = useState<ChartSuggestion[]>([]);  
+  const { data, rawFile, aiReport, setAiReport } = useAppData();
+  const [suggestions, setSuggestions] = useState<ChartSuggestion[]>([]);
+  
   const dashboardRef = useRef<HTMLDivElement>(null);
-
   const [analyzing, setAnalyzing] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [exporting, setExporting] = useState(false);
 
-  // ĐÃ ÉP KIỂU MẢNG TUYỆT ĐỐI KHÔNG BAO GIỜ LỖI LENGTH NỮA!
   const safeData = Array.isArray(data) ? data : [];
   const safeSuggestions = Array.isArray(suggestions) ? suggestions : [];
   const stats = useMemo(() => (safeData.length > 0 ? computeStats(safeData) : null), [safeData]);
@@ -210,7 +199,6 @@ const [suggestions, setSuggestions] = useState<ChartSuggestion[]>([]);
     if (!dashboardRef.current) return;
     setExporting(true);
     try {
-      // Đã thêm skipFonts để chống lỗi chụp ảnh trắng bóc
       const png = await toPng(dashboardRef.current, { backgroundColor: '#f8fafc', quality: 0.95, pixelRatio: 2, skipFonts: true });
       const a = document.createElement('a');
       a.href = png;
@@ -256,7 +244,6 @@ const [suggestions, setSuggestions] = useState<ChartSuggestion[]>([]);
             {generating ? 'ĐANG TẠO...' : 'TẠO DASHBOARD MỚI'}
           </button>
           
-          {/* 👇 ĐÃ BỌC KHIÊN HOÀN TOÀN TẠI ĐÂY */}
           {safeSuggestions.length > 0 && (
             <button
               onClick={handleExportJpg}
@@ -270,7 +257,6 @@ const [suggestions, setSuggestions] = useState<ChartSuggestion[]>([]);
         </div>
       </div>
 
-      {/* 👇 VÀ ĐÃ BỌC KHIÊN HOÀN TOÀN TẠI ĐÂY NỮA NÈ */}
       {safeSuggestions.length > 0 && (
         <div ref={dashboardRef} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 bg-slate-50 p-6 rounded-3xl border border-slate-100 shadow-inner"> 
           {safeSuggestions.map((s, i) => (
@@ -311,7 +297,7 @@ const [suggestions, setSuggestions] = useState<ChartSuggestion[]>([]);
   );
 }
 
-// 🛡️ Hàm vét đáy tự quét cột thông minh
+// 🛡️ Quét dữ liệu cực an toàn
 function buildFallbackSuggestions(count: number, data: any[]): ChartSuggestion[] {
   if (!data || !Array.isArray(data) || data.length === 0) return [];
   
@@ -333,7 +319,7 @@ function buildFallbackSuggestions(count: number, data: any[]): ChartSuggestion[]
     { title: `Cơ cấu sinh viên theo ${x1}`, type: 'Pie', x: x1, y: y1, agg: 'count' },
     { title: `Tổng ${y2} phân bổ theo ${x1}`, type: 'Area', x: x1, y: y2, agg: 'sum' },
     { title: `Dao động ${y1} giữa ${x1}`, type: 'Line', x: x1, y: y1, agg: 'mean' },
-    { title: `Số lượng phân rã ${x1}`, type: 'Pie', x: x1, y: y1, agg: 'count' },
+    { title: `Số lượng phân rã ${x1}`, type: 'Bar', x: x1, y: y1, agg: 'count' }, // Đổi Pie thành Bar để an toàn
     { title: `Tần suất khối lượng ${y1}`, type: 'Bar', x: x1, y: y1, agg: 'count' },
   ];
   
