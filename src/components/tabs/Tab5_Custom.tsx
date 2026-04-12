@@ -102,7 +102,7 @@ export default function Tab5_Custom() {
     [cols, data]
   );
 
-  const chartData = useMemo(() => {
+  const chartData = useMemo<any[]>(() => {
     if (!rendered || !xCol) return [];
     return buildData(data, chartType, xCol, yCol, aggFunc);
   }, [rendered, data, chartType, xCol, yCol, aggFunc]);
