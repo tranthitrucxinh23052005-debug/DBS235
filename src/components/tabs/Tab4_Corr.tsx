@@ -24,12 +24,12 @@ const SCORE_LABELS: Record<string, string> = {
 // Hàm tạo màu Đỏ (Nghịch) -> Trắng (0) -> Xanh dương (Thuận)
 function heatColor(val: number): string {
   if (isNaN(val)) return '#f8fafc';
-  
+
   // Dùng dải màu RdBu (Red-White-Blue)
   // positive (thuận): Xanh dương | negative (nghịch): Đỏ
   const intensity = Math.abs(val);
   const v = Math.round(255 * (1 - intensity));
-  
+
   if (val > 0) {
     // Chuyển từ trắng (255,255,255) sang Đỏ Đậm (165,0,38) 
     // (Để giống ảnh mẫu bà gửi: Tương quan thuận là màu Đỏ Đô)
@@ -55,7 +55,7 @@ function getTextColor(val: number): string {
 export default function Tab4_Relations() {
   const { t } = useLang();
   const { data, correlation } = useAppData();
-  
+
   const [selectedStudent, setSelectedStudent] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
 
@@ -99,7 +99,7 @@ export default function Tab4_Relations() {
   }, [data]);
 
   const students = useMemo(() => [...new Set(data.map(r => String(r.MSSV ?? '')).filter(Boolean))].sort(), [data]);
-  
+
   const subjectsOfStudent = useMemo(() => {
     if (!selectedStudent) return [];
     return [...new Set(data.filter(r => String(r.MSSV) === selectedStudent).map(r => String(r.MON_HOC)))];
@@ -107,7 +107,7 @@ export default function Tab4_Relations() {
 
   const radarData = useMemo(() => {
     if (!selectedStudent || !selectedSubject) return [];
-    
+
     const studentRow = data.find(r => String(r.MSSV) === selectedStudent && String(r.MON_HOC) === selectedSubject);
     if (!studentRow) return [];
 
@@ -138,72 +138,72 @@ export default function Tab4_Relations() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      
+
       {/* CONTAINER CHÍNH: Cố định để không bị tràn layout */}
-        <div className="bg-white p-10 rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center justify-center overflow-hidden">
-          
-          <div className="flex flex-row items-start gap-12">
-            
-            {/* PHẦN 1: MA TRẬN HEATMAP (Ép kích thước ô cố định) */}
-            <div className="relative pt-12 pl-32"> {/* Tạo không gian cho tiêu đề trục */}
-              
-              {/* TIÊU ĐỀ TRỤC X (Nằm ngang trên đầu) */}
-              <div className="absolute top-0 left-32 right-0 grid" style={{ gridTemplateColumns: `repeat(${corrCols.length}, 80px)` }}>
-                {corrCols.map(c => (
-                  <div key={`header-x-${c}`} className="w-20 text-center text-[10px] font-black text-slate-500 uppercase tracking-tighter">
-                    {SCORE_LABELS[c] || c}
-                  </div>
-                ))}
-              </div>
+      <div className="bg-white p-10 rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center justify-center overflow-hidden">
 
-              {/* TIÊU ĐỀ TRỤC Y (Nằm dọc bên trái) */}
-              <div className="absolute top-12 left-0 bottom-0 flex flex-col justify-between h-[320px]">
-                {corrCols.map(c1 => (
-                  <div key={`header-y-${c1}`} className="h-20 w-28 flex items-center justify-end pr-4 text-[10px] font-black text-slate-500 uppercase tracking-tighter text-right">
-                    {SCORE_LABELS[c1] || c1}
-                  </div>
-                ))}
-              </div>
+        <div className="flex flex-row items-start gap-12">
 
-              {/* LƯỚI Ô GIÁ TRỊ (80px x 80px mỗi ô) */}
-              <div className="grid border border-slate-200" style={{ gridTemplateColumns: `repeat(${corrCols.length}, 80px)` }}>
-                {corrCols.map(c1 => (
-                  corrCols.map(c2 => {
-                    const val = corrMatrix[c1]?.[c2] ?? 0;
-                    return (
-                      <div
-                        key={`${c1}-${c2}`}
-                        className="w-20 h-20 border-[0.5px] border-white/30 flex items-center justify-center font-black text-[15px] transition-transform hover:scale-105 hover:z-10 cursor-default"
-                        style={{ background: heatColor(val), color: getTextColor(val) }}
-                        title={`${SCORE_LABELS[c1]} x ${SCORE_LABELS[c2]}: ${val}`}
-                      >
-                        {val.toFixed(2)}
-                      </div>
-                    );
-                  })
-                ))}
-              </div>
+          {/* PHẦN 1: MA TRẬN HEATMAP (Ép kích thước ô cố định) */}
+          <div className="relative pt-12 pl-32"> {/* Tạo không gian cho tiêu đề trục */}
+
+            {/* TIÊU ĐỀ TRỤC X (Nằm ngang trên đầu) */}
+            <div className="absolute top-0 left-32 right-0 grid" style={{ gridTemplateColumns: `repeat(${corrCols.length}, 80px)` }}>
+              {corrCols.map(c => (
+                <div key={`header-x-${c}`} className="w-20 text-center text-[10px] font-black text-slate-500 uppercase tracking-tighter">
+                  {SCORE_LABELS[c] || c}
+                </div>
+              ))}
             </div>
 
-            {/* PHẦN 2: THANH THƯỚC ĐO (COLOR BAR) - Căn giữa theo chiều dọc */}
-            <div className="flex flex-col items-center pt-12">
-              <div className="w-5 h-[320px] rounded-full shadow-inner relative border border-slate-100"
-                   style={{ background: 'linear-gradient(to bottom, rgb(103, 0, 13), #ffffff, rgb(33, 102, 172))' }}>
-                <span className="absolute -right-8 top-0 text-[10px] font-black text-slate-400">1.0</span>
-                <span className="absolute -right-8 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">0.0</span>
-                <span className="absolute -right-8 bottom-0 text-[10px] font-black text-slate-400">-1.0</span>
-              </div>
-              <p className="mt-6 text-[9px] font-black text-slate-300 uppercase tracking-widest" style={{writingMode: 'vertical-rl'}}>Hệ số Pearson</p>
+            {/* TIÊU ĐỀ TRỤC Y (Nằm dọc bên trái) */}
+            <div className="absolute top-12 left-0 bottom-0 flex flex-col justify-between h-[320px]">
+              {corrCols.map(c1 => (
+                <div key={`header-y-${c1}`} className="h-20 w-28 flex items-center justify-end pr-4 text-[10px] font-black text-slate-500 uppercase tracking-tighter text-right">
+                  {SCORE_LABELS[c1] || c1}
+                </div>
+              ))}
+            </div>
+
+            {/* LƯỚI Ô GIÁ TRỊ (80px x 80px mỗi ô) */}
+            <div className="grid border border-slate-200" style={{ gridTemplateColumns: `repeat(${corrCols.length}, 80px)` }}>
+              {corrCols.map(c1 => (
+                corrCols.map(c2 => {
+                  const val = corrMatrix[c1]?.[c2] ?? 0;
+                  return (
+                    <div
+                      key={`${c1}-${c2}`}
+                      className="w-20 h-20 border-[0.5px] border-white/30 flex items-center justify-center font-black text-[15px] transition-transform hover:scale-105 hover:z-10 cursor-default"
+                      style={{ background: heatColor(val), color: getTextColor(val) }}
+                      title={`${SCORE_LABELS[c1]} x ${SCORE_LABELS[c2]}: ${val}`}
+                    >
+                      {val.toFixed(2)}
+                    </div>
+                  );
+                })
+              ))}
+            </div>
+          </div>
+
+          {/* PHẦN 2: THANH THƯỚC ĐO (COLOR BAR) - Căn giữa theo chiều dọc */}
+          <div className="flex flex-col items-center pt-12">
+            <div className="w-5 h-[320px] rounded-full shadow-inner relative border border-slate-100"
+              style={{ background: 'linear-gradient(to bottom, rgb(103, 0, 13), #ffffff, rgb(33, 102, 172))' }}>
+              <span className="absolute -right-8 top-0 text-[10px] font-black text-slate-400">1.0</span>
+              <span className="absolute -right-8 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">0.0</span>
+              <span className="absolute -right-8 bottom-0 text-[10px] font-black text-slate-400">-1.0</span>
             </div>
 
           </div>
-          
-          {/* CHÚ GIẢI NHANH Ở DƯỚI */}
-          <div className="mt-12 flex gap-8 text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-6 py-2 rounded-full border border-slate-100">
-            <span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[rgb(103,0,13)]"></div> Tương quan thuận</span>
-            <span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[rgb(33,102,172)]"></div> Tương quan nghịch</span>
-          </div>
+
         </div>
+
+        {/* CHÚ GIẢI NHANH Ở DƯỚI */}
+        <div className="mt-12 flex gap-8 text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-6 py-2 rounded-full border border-slate-100">
+          <span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[rgb(103,0,13)]"></div> Tương quan thuận</span>
+          <span className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[rgb(33,102,172)]"></div> Tương quan nghịch</span>
+        </div>
+      </div>
 
       {/* KHU VỰC 2: PHÂN BỐ ĐIỂM SỐ */}
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
@@ -229,7 +229,7 @@ export default function Tab4_Relations() {
           <Award className="w-6 h-6 text-amber-500" />
           {t('radarTitle') || 'Phân tích năng lực cá nhân đa chiều'}
         </h3>
-        
+
         {/* Thanh công cụ chọn SV */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8 p-5 bg-slate-50 rounded-2xl border border-slate-200 shadow-inner">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1">
@@ -266,7 +266,7 @@ export default function Tab4_Relations() {
         {/* Nội dung Radar Chart (Chia 2 cột) */}
         {radarData.length > 0 ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center bg-slate-50/50 p-6 rounded-3xl border border-slate-100">
-            
+
             {/* Cột 1: Biểu đồ Radar (Chiếm 2 phần) */}
             <div className="lg:col-span-2 h-[400px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -289,7 +289,7 @@ export default function Tab4_Relations() {
                 <Sparkles className="w-5 h-5 text-blue-600" />
                 <h4 className="font-black text-slate-800 uppercase text-lg">Báo cáo chênh lệch</h4>
               </div>
-              
+
               <div className="space-y-3">
                 {radarData.map(d => {
                   const diffVal = Number(d.diff);
@@ -304,7 +304,7 @@ export default function Tab4_Relations() {
                           <span className="text-2xl font-black text-slate-800">{d.score}</span>
                           <span className="text-xs font-bold text-slate-400">/ 10</span>
                         </div>
-                        
+
                         <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-lg ${isUp ? 'bg-emerald-100 text-emerald-700' : isNeutral ? 'bg-slate-100 text-slate-600' : 'bg-rose-100 text-rose-700'}`}>
                           {isUp ? <TrendingUp className="w-3 h-3" /> : isNeutral ? '-' : <TrendingDown className="w-3 h-3" />}
                           {isNeutral ? 'Bằng TB' : `${Math.abs(diffVal)} điểm`}
