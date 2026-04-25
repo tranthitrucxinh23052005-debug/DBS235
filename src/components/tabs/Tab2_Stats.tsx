@@ -2,7 +2,7 @@ import { useMemo, useState, useRef } from 'react';
 import { Users, TrendingUp, Award, CheckCircle, ChevronDown, ChevronUp, Sparkles, HelpCircle } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  PieChart, Pie, Cell, ComposedChart, Line, Scatter, ErrorBar
+  PieChart, Pie, Cell, ComposedChart, Scatter, ErrorBar
 } from 'recharts';
 import { useLang } from '../../hooks/useLanguage';
 import { useAppData } from '../../hooks/useAppData';
@@ -37,6 +37,7 @@ export default function Tab2_Stats() {
   const stats = useMemo(() => computeStats(data), [data]);
   const boxData = useMemo(() => computeBoxplotData(data), [data]);
   const classes = useMemo(() => ['', ...[...new Set(data.map(r => String(r.LOP ?? '')).filter(Boolean))].sort()], [data]);
+
   const classData = useMemo(() => {
     const filtered = selectedClass ? data.filter(r => String(r.LOP) === selectedClass) : data;
     const bySubj: Record<string, Record<string, number>> = {};
@@ -49,6 +50,7 @@ export default function Tab2_Stats() {
     }
     return Object.entries(bySubj).map(([subject, counts]) => ({ subject, ...counts }));
   }, [data, selectedClass]);
+
   const chartData = useMemo(() => {
     return boxData?.map((d: any) => ({
       subject: d.subject,
@@ -58,15 +60,23 @@ export default function Tab2_Stats() {
       q3: Number(d.q3),
       max: Number(d.max),
       mean: Number(d.mean),
-
       boxHeight: d.q3 - d.q1,
-      lowerWhisker: d.q1 - d.min,
-      upperWhisker: d.max - d.q3,
-
+      // ✅ Dùng array [xuống, lên] để whisker chỉ đi 1 chiều
+      lowerWhiskerErr: [d.q1 - d.min, 0],
+      upperWhiskerErr: [0, d.max - d.q3],
       median_val: d.median,
       mean_val: d.mean
     }));
   }, [boxData]);
+  const yDomain = useMemo(() => {
+    if (!chartData?.length) return [0, 11];
+    const mins = chartData.map((d: any) => d.min);
+    const maxs = chartData.map((d: any) => d.max);
+    const lower = Math.floor(Math.min(...mins) * 2) / 2 - 0.5;  // làm tròn 0.5 xuống
+    const upper = Math.ceil(Math.max(...maxs) * 2) / 2 + 0.5;   // làm tròn 0.5 lên
+    return [lower, upper];
+  }, [chartData]);
+  // ĐÃ PHỤC HỒI LẠI BIẾN pieData BỊ MẤT
   const pieData = useMemo(() => {
     const counts: Record<string, number> = { 'Xuất sắc': 0, 'Giỏi': 0, 'Khá': 0, 'Trung bình': 0, 'Yếu': 0, 'Không đạt': 0 };
     for (const row of data) {
@@ -75,10 +85,12 @@ export default function Tab2_Stats() {
     }
     return Object.entries(counts).filter(([, v]) => v > 0).map(([name, value]) => ({ name, value }));
   }, [data]);
+
+  // Đã căn chỉnh width (x1, x2) cho khớp với barSize={40} của Box
   const MedianLine = ({ cx, cy }: any) => (
     <line
-      x1={cx - 18}
-      x2={cx + 18}
+      x1={cx - 20}
+      x2={cx + 20}
       y1={cy}
       y2={cy}
       stroke="#111827"
@@ -86,10 +98,12 @@ export default function Tab2_Stats() {
       strokeLinecap="round"
     />
   );
+
+  // Đã căn chỉnh width cho nắp râu (Whisker Cap)
   const WhiskerCap = ({ cx, cy }: any) => (
     <line
-      x1={cx - 8}
-      x2={cx + 8}
+      x1={cx - 10}
+      x2={cx + 10}
       y1={cy}
       y2={cy}
       stroke="#475569"
@@ -180,12 +194,12 @@ export default function Tab2_Stats() {
         </div>
       </div>
 
-      {/* BOXPLOT SECTION - PHIÊN BẢN CHUẨN KHỞI NGHIỆP */}
+      {/* BOXPLOT SECTION */}
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 overflow-hidden" ref={boxRef}>
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>
             <h3 className="font-bold text-slate-800 text-lg">Biểu đồ Boxplot phân phối điểm</h3>
-            <p className="text-xs text-slate-400 mt-1 italic">Trực quan hóa độ phân tán (Min, Q1, Median, Q3, Max) và Điểm trung bình</p>
+            <p className="text-xs text-slate-400 mt-1 italic">Trực quan hóa độ phân tán (Min, Q1, Median, Q3, Max)</p>
           </div>
           <button onClick={analyzeBoxplot} disabled={aiLoading} className="flex items-center gap-2 bg-slate-900 text-white px-6 py-2.5 rounded-2xl text-sm font-semibold hover:bg-blue-600 transition-all disabled:opacity-50">
             {aiLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Sparkles className="w-4 h-4" />}
@@ -208,69 +222,40 @@ export default function Tab2_Stats() {
               interval={0}
             />
 
-            <YAxis domain={['dataMin - 1', 'dataMax + 1']} />
+            <YAxis domain={yDomain} />
 
             <Tooltip content={<BoxTooltip />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
 
-            {/* Đẩy box lên Q1 */}
-            <Bar dataKey="q1" stackId="box" fill="transparent" isAnimationActive={false} />
+            <Bar dataKey="q1" stackId="box" fill="transparent" barSize={40} isAnimationActive={false} />
 
-            {/* BOX */}
-            <Bar dataKey="boxHeight" stackId="box">
+            <Bar dataKey="boxHeight" stackId="box" barSize={40}>
               {chartData.map((_, index) => (
                 <Cell
                   key={index}
                   fill={BOX_COLORS[index % BOX_COLORS.length]}
-                  fillOpacity={0.8}   // tăng lên
+                  fillOpacity={0.8}
                   stroke="#0f172a"
-                  strokeWidth={1.5}   // đậm hơn
+                  strokeWidth={1.5}
                 />
               ))}
             </Bar>
 
-            {/* WHISKER DƯỚI */}
             <Scatter dataKey="q1" fill="none">
-              <ErrorBar
-                dataKey="lowerWhisker"
-                direction="y"
-                stroke="#475569"
-                strokeWidth={2}
-                width={10}
-              />
+              <ErrorBar dataKey="lowerWhiskerErr" direction="y" stroke="#475569" strokeWidth={2} width={10} />
             </Scatter>
 
-            {/* WHISKER TRÊN */}
             <Scatter dataKey="q3" fill="none">
-              <ErrorBar
-                dataKey="upperWhisker"
-                direction="y"
-                stroke="#475569"
-                strokeWidth={2}
-                width={10}
-              />
+              <ErrorBar dataKey="upperWhiskerErr" direction="y" stroke="#475569" strokeWidth={2} width={10} />
             </Scatter>
 
-            {/* CAP (đầu râu) */}
             <Scatter dataKey="min" shape={<WhiskerCap />} />
             <Scatter dataKey="max" shape={<WhiskerCap />} />
 
-            {/* MEDIAN */}
             <Scatter
               dataKey="median_val"
               shape={MedianLine}
               xAxisId={0}
               yAxisId={0}
-            />
-
-            {/* MEAN */}
-            <Line
-              type="linear"
-              dataKey="mean_val"
-              stroke="#ef4444"
-              strokeWidth={3}
-              dot={{ r: 5, fill: '#ef4444', stroke: '#fff', strokeWidth: 2 }}
-              isAnimationActive
-              animationDuration={800}
             />
           </ComposedChart>
         </ResponsiveContainer>
@@ -303,21 +288,17 @@ export default function Tab2_Stats() {
               <div className="space-y-4">
                 <div className="flex gap-4">
                   <div className="w-1.5 h-1.5 rounded-full bg-slate-800 mt-2 shrink-0" />
-                  <p className="text-sm text-slate-600"><strong className="text-slate-800">Chấm đen giữa hộp (Median):</strong> Giá trị trung vị. 50% sinh viên có điểm cao hơn và 50% thấp hơn.</p>
+                  <p className="text-sm text-slate-600"><strong className="text-slate-800">Đường kẻ đen giữa hộp (Median):</strong> Giá trị trung vị. 50% sinh viên có điểm cao hơn và 50% thấp hơn.</p>
                 </div>
                 <div className="flex gap-4">
                   <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 shrink-0" />
-                  <p className="text-sm text-slate-600"><strong className="text-slate-800">Chiều cao hộp (IQR):</strong> Hộp càng cao thì điểm số của nhóm 50% sinh viên ở giữa càng biến thiên mạnh.</p>
+                  <p className="text-sm text-slate-600"><strong className="text-slate-800">Chiều cao hộp (IQR):</strong> Vùng chứa 50% điểm số nằm ở giữa. Hộp càng cao thì điểm số của nhóm này càng biến thiên mạnh.</p>
                 </div>
               </div>
               <div className="space-y-4">
                 <div className="flex gap-4">
-                  <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-2 shrink-0" />
-                  <p className="text-sm text-slate-600"><strong className="text-slate-800">Đường đỏ (Mean):</strong> Điểm trung bình cộng. Nếu nó lệch xa Median, phân phối điểm đang bị lệch.</p>
-                </div>
-                <div className="flex gap-4">
                   <div className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-2 shrink-0" />
-                  <p className="text-sm text-slate-600"><strong className="text-slate-800">Râu (Whiskers):</strong> Điểm Min và Max. Thể hiện phổ điểm trải dài nhất của môn học đó.</p>
+                  <p className="text-sm text-slate-600"><strong className="text-slate-800">Râu (Whiskers):</strong> Thể hiện điểm Max và Min (không tính ngoại lệ). Thể hiện phổ điểm trải dài nhất của môn học đó.</p>
                 </div>
               </div>
             </div>
@@ -328,7 +309,7 @@ export default function Tab2_Stats() {
   );
 }
 
-// BẢNG GIẢI THÍCH HIỆN RA KHI RÀ CHUỘT VÀO TỪNG BOX (BỌC GIÁP TITAN CHỐNG SẬP 1000%)
+// BẢNG GIẢI THÍCH (Tooltip)
 function BoxTooltip({ active, payload, label }: any) {
   if (!active || !payload || !payload.length) return null;
 
@@ -337,9 +318,12 @@ function BoxTooltip({ active, payload, label }: any) {
 
   const f = (v: any) => (typeof v === 'number' ? v.toFixed(2) : 'N/A');
 
+  // Dùng Array để khử hoàn toàn "khoảng trắng tàng hình" gây lỗi Babel
+  const pClassName = ['font-bold', 'text-slate-800', 'border-b', 'pb-2', 'mb-2', 'text-sm'].join(' ');
+
   return (
     <div className="bg-white border border-slate-100 rounded-2xl shadow-2xl p-5 text-xs min-w-[220px] space-y-2">
-      <p className="font-bold text-slate-800 border-b pb-2 mb-2 text-sm">
+      <p className={pClassName}>
         {label || d.subject}
       </p>
 
