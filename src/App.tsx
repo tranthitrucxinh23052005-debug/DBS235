@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Database, BarChart2, Brain, Network, PieChart, Cpu, FileText,
-  Globe, CheckCircle2, X, Menu, ChevronLeft, ChevronRight, Sliders
+  Globe, CheckCircle2, X, Menu, ChevronLeft, ChevronRight, Sliders, MessageSquare,
 } from 'lucide-react';
 import { LanguageProvider, useLang } from './hooks/useLanguage';
 import { AppDataProvider, useAppData } from './hooks/useAppData';
@@ -15,7 +15,7 @@ import Tab5_Custom from './components/tabs/Tab5_Custom';
 import Tab6_ML from './components/tabs/Tab6_ML';
 import Tab7_Summary from './components/tabs/Tab7_Summary';
 import Tab8_Simulation from './components/tabs/Tab8_Simulation'; // Nhúng Tab 8 vào đây
-
+import Tab9_Questions from './components/tabs/Tab9_Questions'; // Nhúng Tab 8 vào đây
 // Khai báo thêm Tab 8 vào hệ thống
 const TABS = [
   { id: 0, labelKey: 'tab1', icon: Database, Component: Tab1_Data, fallbackLabel: 'Dữ liệu' },
@@ -26,6 +26,8 @@ const TABS = [
   { id: 5, labelKey: 'tab6', icon: Cpu, Component: Tab6_ML, fallbackLabel: 'Học máy (ML)' },
   { id: 6, labelKey: 'tab7', icon: FileText, Component: Tab7_Summary, fallbackLabel: 'Báo cáo' },
   { id: 7, labelKey: 'tab8', icon: Sliders, Component: Tab8_Simulation, fallbackLabel: 'Mô phỏng Đề thi' },
+  // Đã sửa lại định dạng cho Tab 9
+  { id: 8, labelKey: 'tab9', icon: MessageSquare, Component: Tab9_Questions, fallbackLabel: 'Hệ thống Hỏi Đáp' }
 ];
 
 function AppContent() {
