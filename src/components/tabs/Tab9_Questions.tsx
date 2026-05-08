@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuestionOrchestrator, QuestionId } from '../../hooks/useQuestionOrchestrator';
-import { MessageSquare, ChevronRight, Loader2, AlertCircle } from 'lucide-react';
+import { MessageSquare, ChevronRight, Loader2, AlertCircle, FileDown } from 'lucide-react';
 import { useAppData } from '../../hooks/useAppData';
 import Q1_Simulation from '../questions/Q1_Simulation';
 import Q2_Clustering from '../questions/Q2_Clustering';
@@ -10,16 +10,14 @@ import Q3_Correlation from '../questions/Q3_Correlation';
 import Q4_EarlyWarning from '../questions/Q4_EarlyWarning';
 import Q5_Fairness from '../questions/Q5_Fairness';
 
-
-// === IMPORT CÁC COMPONENT CÂU HỎI Ở ĐÂY (Sẽ tạo ở các Phase sau) ===
-// const Q1_Simulation = () => <div>Nội dung Câu hỏi 1</div>;
-
 export default function Tab9_Questions() {
     const { QUESTIONS, runQuestion, loading, error } = useQuestionOrchestrator();
-    const { activeData } = useAppData();
+    // Đã thêm rawFile vào đây để hàm handleExportWord có file gốc gửi đi
+    const { activeData, rawFile } = useAppData();
 
     const [selectedQ, setSelectedQ] = useState<QuestionId | null>(null);
     const [qResult, setQResult] = useState<any>(null);
+    const [isExporting, setIsExporting] = useState(false);
 
     // Xử lý khi user click vào một câu hỏi ở Sidebar
     const handleSelectQuestion = async (qId: QuestionId) => {
@@ -32,6 +30,7 @@ export default function Tab9_Questions() {
             setQResult(result);
         }
     };
+
     const handleRunQuestionParams = async (params: any) => {
         if (!selectedQ) return;
         const res = await runQuestion(selectedQ, params);
@@ -85,6 +84,42 @@ export default function Tab9_Questions() {
         }
     };
 
+    // Đã thay thế YOUR_BACKEND_URL bằng link HF của bà và thêm trạng thái loading
+    const handleExportWord = async () => {
+        if (!rawFile) {
+            alert("Vui lòng tải lên file dữ liệu ở Tab 1 trước khi xuất báo cáo!");
+            return;
+        }
+
+        setIsExporting(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', rawFile);
+            formData.append('course_name', "Phân tích dữ liệu kinh doanh");
+            formData.append('semester', "HK2/2025-2026");
+
+            const response = await fetch('https://tieuthetunhacongdang-tx-data-analytics-api.hf.space/api/export-report', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) throw new Error("Lỗi khi tạo báo cáo từ Server");
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = "Bao-cao-pho-diem.docx";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        } catch (err) {
+            alert("Không thể xuất báo cáo: " + err);
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
     return (
         <div className="h-[800px] flex gap-6 animate-in fade-in duration-500">
 
@@ -122,6 +157,30 @@ export default function Tab9_Questions() {
                             </p>
                         </button>
                     ))}
+                </div>
+
+                {/* NÚT XUẤT BÁO CÁO WORD */}
+                <div className="mt-2 pt-4 border-t border-slate-200">
+                    <button
+                        onClick={handleExportWord}
+                        disabled={isExporting}
+                        className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-sm transition-all ${isExporting
+                                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-md active:scale-95'
+                            }`}
+                    >
+                        {isExporting ? (
+                            <>
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                Đang tạo báo cáo...
+                            </>
+                        ) : (
+                            <>
+                                <FileDown className="w-5 h-5" />
+                                Xuất Báo Cáo Word
+                            </>
+                        )}
+                    </button>
                 </div>
             </div>
 
