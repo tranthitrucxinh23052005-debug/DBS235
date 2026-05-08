@@ -103,8 +103,16 @@ export default function Tab9_Questions() {
                 body: formData,
             });
 
-            if (!response.ok) throw new Error("Lỗi khi tạo báo cáo từ Server");
+            // BỌC THÉP: Kiểm tra xem backend có gửi lại thông báo lỗi bằng JSON hay không
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+                const errData = await response.json();
+                throw new Error(errData.message || "Lỗi tạo file từ Backend");
+            }
 
+            if (!response.ok) throw new Error("Lỗi mạng khi gọi Server");
+
+            // Nếu ok thì mới biến thành file Word và tải về
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -113,8 +121,8 @@ export default function Tab9_Questions() {
             document.body.appendChild(a);
             a.click();
             a.remove();
-        } catch (err) {
-            alert("Không thể xuất báo cáo: " + err);
+        } catch (err: any) {
+            alert("Không thể xuất báo cáo: " + err.message);
         } finally {
             setIsExporting(false);
         }
@@ -165,8 +173,8 @@ export default function Tab9_Questions() {
                         onClick={handleExportWord}
                         disabled={isExporting}
                         className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-sm transition-all ${isExporting
-                                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                                : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-md active:scale-95'
+                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                            : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-md active:scale-95'
                             }`}
                     >
                         {isExporting ? (
