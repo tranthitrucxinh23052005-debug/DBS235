@@ -13,7 +13,7 @@ import Tab3_AI from './components/tabs/Tab3_AI';
 import Tab4_Corr from './components/tabs/Tab4_Corr';
 import Tab5_Custom from './components/tabs/Tab5_Custom';
 import Tab6_ML from './components/tabs/Tab6_ML';
-import Tab7_Summary from './components/tabs/Tab7_Summary';
+//import Tab7_Summary from './components/tabs/Tab7_Summary';
 import Tab8_Simulation from './components/tabs/Tab8_Simulation'; // Nhúng Tab 8 vào đây
 import Tab9_Questions from './components/tabs/Tab9_Questions'; // Nhúng Tab 8 vào đây
 // Khai báo thêm Tab 8 vào hệ thống
@@ -24,8 +24,8 @@ const TABS = [
   { id: 3, labelKey: 'tab4', icon: Network, Component: Tab4_Corr, fallbackLabel: 'Tương quan' },
   { id: 4, labelKey: 'tab5', icon: PieChart, Component: Tab5_Custom, fallbackLabel: 'Cá nhân hóa' },
   { id: 5, labelKey: 'tab6', icon: Cpu, Component: Tab6_ML, fallbackLabel: 'Học máy (ML)' },
-  { id: 6, labelKey: 'tab7', icon: FileText, Component: Tab7_Summary, fallbackLabel: 'Báo cáo' },
-  /*{ id: 7, labelKey: 'tab8', icon: Sliders, Component: Tab8_Simulation, fallbackLabel: 'Mô phỏng Đề thi' },*/
+  //{ id: 6, labelKey: 'tab7', icon: FileText, Component: Tab7_Summary, fallbackLabel: 'Báo cáo' },
+  { id: 7, labelKey: 'tab8', icon: Sliders, Component: Tab8_Simulation, fallbackLabel: 'Mô phỏng Đề thi' },
   // Đã sửa lại định dạng cho Tab 9
   { id: 8, labelKey: 'tab9', icon: MessageSquare, Component: Tab9_Questions, fallbackLabel: 'Hệ thống Hỏi Đáp' }
 ];
