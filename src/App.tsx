@@ -25,7 +25,7 @@ const TABS = [
   { id: 4, labelKey: 'tab5', icon: PieChart, Component: Tab5_Custom, fallbackLabel: 'Cá nhân hóa' },
   { id: 5, labelKey: 'tab6', icon: Cpu, Component: Tab6_ML, fallbackLabel: 'Học máy (ML)' },
   { id: 6, labelKey: 'tab7', icon: FileText, Component: Tab7_Summary, fallbackLabel: 'Báo cáo' },
-  { id: 7, labelKey: 'tab8', icon: Sliders, Component: Tab8_Simulation, fallbackLabel: 'Mô phỏng Đề thi' },
+  /*{ id: 7, labelKey: 'tab8', icon: Sliders, Component: Tab8_Simulation, fallbackLabel: 'Mô phỏng Đề thi' },*/
   // Đã sửa lại định dạng cho Tab 9
   { id: 8, labelKey: 'tab9', icon: MessageSquare, Component: Tab9_Questions, fallbackLabel: 'Hệ thống Hỏi Đáp' }
 ];
